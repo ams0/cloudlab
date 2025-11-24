@@ -1,0 +1,54 @@
+# Ansible sensitive files
+.vault_password
+*.vault_password
+*.vault_pass
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Personal notes
+notes.txt
+TODO.md
+
+# Sensitive inventory
+inventory.ini
+
+# Kubeconfig
+kubeconfig
+kubeconfig.*
+kubeconfig-remote*
+
+# Terraform files
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
