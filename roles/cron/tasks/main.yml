@@ -1,0 +1,25 @@
+---
+- name: Install cron
+  apt:
+    name: cron
+    state: present
+
+- name: Ensure cron service is running
+  service:
+    name: cron
+    state: started
+    enabled: yes
+
+- name: Create cron jobs
+  cron:
+    name: "{{ item.name }}"
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    job: "{{ item.job }}"
+    user: "{{ item.user | default(ansible_user) }}"
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ cron_jobs | default([]) }}"
+  when: cron_jobs is defined

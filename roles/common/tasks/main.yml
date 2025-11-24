@@ -1,0 +1,109 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Set timezone
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Install locales package
+  apt:
+    name: locales
+    state: present
+
+- name: Generate locale
+  locale_gen:
+    name: "{{ locale }}"
+    state: present
+
+- name: Set system locale
+  shell: update-locale LANG={{ locale }}
+  changed_when: false
+
+- name: Create sudo group
+  group:
+    name: sudo
+    state: present
+
+- name: Add user to sudo group
+  user:
+    name: "{{ ansible_user }}"
+    groups: sudo
+    append: yes
+
+- name: Configure sudo without password
+  lineinfile:
+    path: /etc/sudoers
+    line: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
+    validate: 'visudo -cf %s'
+
+- name: Check if swap is enabled
+  shell: swapon --show --noheadings
+  register: swap_status
+  failed_when: false
+  changed_when: false
+
+- name: Disable swap if enabled
+  shell: swapoff -a
+  when: swap_status.stdout != ""
+
+- name: Remove swap entries from fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+    replace: '# \1'
+  register: fstab_swap_disabled
+
+- name: Disable systemd swap target
+  systemd:
+    name: swap.target
+    enabled: no
+    masked: yes
+  ignore_errors: yes
+
+- name: Disable any swap services
+  shell: systemctl --type swap --all | awk '/\.swap/ { print $1 }' | xargs -r systemctl mask
+  changed_when: false
+  ignore_errors: yes
+
+- name: Install iptables-persistent
+  apt:
+    name: iptables-persistent
+    state: present
+    update_cache: no
+
+- name: Allow HTTP through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80
+    jump: ACCEPT
+    comment: "HTTP"
+    action: insert
+    rule_num: "1"
+
+- name: Allow HTTPS through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 443
+    jump: ACCEPT
+    comment: "HTTPS"
+    action: insert
+    rule_num: "1"
+
+- name: Allow port 8000 through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 8000
+    jump: ACCEPT
+    comment: "Port 8000"
+    action: insert
+    rule_num: "1"
+
+- name: Save iptables rules
+  shell: netfilter-persistent save
+  changed_when: false

@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: tailscale
+  author: Your Name
+  description: Tailscale VPN installation and configuration
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+  galaxy_tags:
+    - vpn
+    - tailscale
+    - networking
+
+dependencies: []

@@ -1,0 +1,19 @@
+---
+# Common packages to install
+common_packages:
+  - curl
+  - wget
+  - git
+  - htop
+  - vim
+  - unzip
+  - iputils-ping
+  - dnsutils
+  - netcat-openbsd
+  - software-properties-common
+  - apt-transport-https
+  - ca-certificates
+  - bash-completion
+  - gnupg
+  - lsb-release
+  - locales

@@ -1,0 +1,7 @@
+---
+- name: restart datadog-agent
+  systemd:
+    name: datadog-agent
+    state: restarted
+    daemon_reload: yes
+  listen: restart datadog-agent

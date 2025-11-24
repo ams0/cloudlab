@@ -1,0 +1,128 @@
+---
+- name: Check if Datadog API key is configured
+  fail:
+    msg: "Datadog API key must be configured in vault as 'vault_datadog_api_key'"
+  when: datadog_api_key == ""
+
+- name: Install Datadog dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg2
+    state: present
+    update_cache: yes
+
+- name: Add Datadog GPG key
+  get_url:
+    url: "{{ datadog_apt_key_url }}"
+    dest: /tmp/datadog.gpg
+    mode: '0644'
+
+- name: Import Datadog GPG key
+  shell: |
+    gpg --dearmor < /tmp/datadog.gpg > /usr/share/keyrings/datadog-archive-keyring.gpg
+    chmod a+r /usr/share/keyrings/datadog-archive-keyring.gpg
+    rm /tmp/datadog.gpg
+  args:
+    creates: /usr/share/keyrings/datadog-archive-keyring.gpg
+
+- name: Check if Datadog Agent is already installed
+  stat:
+    path: /etc/datadog-agent/datadog.yaml
+  register: datadog_installed
+
+- name: Download Datadog installation script
+  get_url:
+    url: https://s3.amazonaws.com/dd-agent/scripts/install_script_agent7.sh
+    dest: /tmp/datadog_install.sh
+    mode: '0755'
+  when: not datadog_installed.stat.exists
+
+- name: Install Datadog Agent using official script
+  shell: "DD_API_KEY={{ datadog_api_key }} DD_SITE={{ datadog_site }} bash /tmp/datadog_install.sh"
+  when: not datadog_installed.stat.exists
+  no_log: true
+
+- name: Remove installation script
+  file:
+    path: /tmp/datadog_install.sh
+    state: absent
+  when: not datadog_installed.stat.exists
+
+- name: Create Datadog configuration directory
+  file:
+    path: /etc/datadog-agent
+    state: directory
+    owner: dd-agent
+    group: dd-agent
+    mode: '0755'
+
+- name: Create Datadog configuration file
+  template:
+    src: datadog.yaml.j2
+    dest: /etc/datadog-agent/datadog.yaml
+    owner: dd-agent
+    group: dd-agent
+    mode: '0640'
+    backup: yes
+  notify: restart datadog-agent
+  no_log: true
+
+- name: Create logs configuration directory
+  file:
+    path: "{{ datadog_logs_config_dir }}"
+    state: directory
+    owner: dd-agent
+    group: dd-agent
+    mode: '0755'
+  when: datadog_logs_enabled
+
+- name: Configure log collection
+  template:
+    src: logs.yaml.j2
+    dest: "{{ datadog_logs_config_dir }}/logs.yaml"
+    owner: dd-agent
+    group: dd-agent
+    mode: '0644'
+  when: datadog_logs_enabled
+  notify: restart datadog-agent
+
+- name: Create custom checks directory
+  file:
+    path: "{{ datadog_custom_checks_dir }}"
+    state: directory
+    owner: dd-agent
+    group: dd-agent
+    mode: '0755'
+
+- name: Configure integrations
+  template:
+    src: "{{ item }}.yaml.j2"
+    dest: "/etc/datadog-agent/conf.d/{{ item }}.d/conf.yaml"
+    owner: dd-agent
+    group: dd-agent
+    mode: '0644'
+  loop: "{{ datadog_integrations }}"
+  notify: restart datadog-agent
+
+- name: Enable and start Datadog Agent service
+  systemd:
+    name: datadog-agent
+    state: "{{ datadog_service_state }}"
+    enabled: "{{ datadog_service_enabled }}"
+    daemon_reload: yes
+
+- name: Check Datadog Agent status
+  shell: datadog-agent status
+  register: datadog_agent_status
+  changed_when: false
+  failed_when: false
+
+- name: Display Datadog Agent status
+  debug:
+    msg: |
+      Datadog Agent Status:
+      {{ datadog_agent_status.stdout_lines[:20] | join('\n') }}
+  when: datadog_agent_status.rc == 0

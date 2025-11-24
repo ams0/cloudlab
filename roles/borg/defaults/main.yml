@@ -1,0 +1,65 @@
+---
+# Borg Backup configuration defaults
+
+# Installation method (binary, pip, apt, source)
+borg_install_method: binary
+borg_version: "1.4.1"  # Latest stable version with ARM binary
+borg_binary_url_x64: "https://github.com/borgbackup/borg/releases/download/{{ borg_version }}/borg-linux64"
+borg_binary_url_arm64: "https://borg.bauerj.eu/bin/borg-{{ borg_version }}-arm64"
+borg_binary_path: "/usr/local/bin/borg"
+borg_binary_checksum: ""  # Optional SHA256 checksum for verification
+
+# For Borg 2.0, use pip since ARM binaries aren't available yet
+borg_use_pip_for_2x: true
+
+# Repository configuration
+borg_repository: ""  # Must be set in group_vars or host_vars
+borg_encryption: repokey-blake2
+borg_compression: auto,lzma,6
+
+# SSH configuration  
+borg_ssh_key: "/home/{{ borg_user }}/.ssh/borg_backup"
+borg_ssh_user: ""  # Must be set
+borg_ssh_host: ""  # Must be set
+borg_ssh_port: 22
+borg_remote_path: ""  # Full path to borg on remote server (e.g., /usr/local/bin/borg)
+
+# Backup configuration
+borg_backup_name: "{{ inventory_hostname }}-{now}"
+borg_backup_paths:
+  - /etc
+  - /home
+  - /root
+  - /var/log
+  - /opt
+
+borg_exclude_patterns:
+  - "*.cache"
+  - "*/cache/*"
+  - "*/tmp/*"
+  - "*/temp/*"
+  - "*.tmp"
+  - "*.temp"
+  - "*/.git/*"
+  - "*/node_modules/*"
+  - "*/__pycache__/*"
+  - "*/venv/*"
+  - "*/virtualenv/*"
+
+# Retention policy
+borg_keep_daily: 7
+borg_keep_weekly: 4
+borg_keep_monthly: 6
+borg_keep_yearly: 1
+
+# Cron schedule
+borg_backup_hour: "02"
+borg_backup_minute: "30"
+borg_backup_weekday: "*"
+
+# Environment
+borg_user: "{{ ansible_user }}"
+borg_group: "{{ ansible_user }}"
+
+# Passphrase (should be in vault)
+borg_passphrase: ""

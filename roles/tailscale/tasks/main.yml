@@ -1,0 +1,98 @@
+---
+- name: Add Tailscale GPG key
+  get_url:
+    url: https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg
+    dest: /tmp/tailscale.gpg
+    mode: '0644'
+
+- name: Import Tailscale GPG key
+  shell: |
+    gpg --dearmor < /tmp/tailscale.gpg > /usr/share/keyrings/tailscale-archive-keyring.gpg
+    rm /tmp/tailscale.gpg
+  args:
+    creates: /usr/share/keyrings/tailscale-archive-keyring.gpg
+
+- name: Add Tailscale repository
+  apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main"
+    state: present
+    filename: tailscale
+    update_cache: yes
+
+- name: Install Tailscale
+  apt:
+    name: tailscale
+    state: present
+    update_cache: yes
+
+- name: Check if Tailscale is already authenticated
+  shell: tailscale status --json
+  register: tailscale_status
+  failed_when: false
+  changed_when: false
+
+- name: Read auth key from file
+  slurp:
+    src: "{{ tailscale_auth_key_file }}"
+  register: auth_key_content
+  when: 
+    - tailscale_auth_key_file != ""
+    - tailscale_auth_key == ""
+  no_log: true
+
+- name: Set auth key from file content
+  set_fact:
+    tailscale_auth_key: "{{ auth_key_content.content | b64decode | trim }}"
+  when: 
+    - tailscale_auth_key_file != ""
+    - tailscale_auth_key == ""
+  no_log: true
+
+- name: Authenticate Tailscale
+  shell: |
+    tailscale up \
+    {% if tailscale_hostname != "" %}
+    --hostname="{{ tailscale_hostname }}" \
+    {% endif %}
+    {% if tailscale_advertise_routes | length > 0 %}
+    --advertise-routes="{{ tailscale_advertise_routes | join(',') }}" \
+    {% endif %}
+    {% if tailscale_accept_routes %}
+    --accept-routes \
+    {% endif %}
+    {% if not tailscale_accept_dns %}
+    --accept-dns=false \
+    {% endif %}
+    {% if tailscale_advertise_exit_node %}
+    --advertise-exit-node \
+    {% endif %}
+    {% if tailscale_shields_up %}
+    --shields-up \
+    {% endif %}
+    {% for arg in tailscale_extra_args %}
+    {{ arg }} \
+    {% endfor %}
+    --authkey="{{ tailscale_auth_key }}"
+  when: 
+    - tailscale_auth_key != ""
+    - tailscale_status.stdout is defined
+    - (tailscale_status.stdout | from_json).BackendState != "Running"
+  register: tailscale_up_result
+  no_log: true
+
+- name: Enable and start Tailscale service
+  systemd:
+    name: tailscaled
+    state: "{{ tailscale_service_state }}"
+    enabled: "{{ tailscale_service_enabled }}"
+
+- name: Get Tailscale status
+  shell: tailscale status
+  register: tailscale_final_status
+  changed_when: false
+
+- name: Display Tailscale status
+  debug:
+    msg: |
+      Tailscale Status:
+      {{ tailscale_final_status.stdout }}

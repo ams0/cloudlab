@@ -1,0 +1,22 @@
+---
+- name: Install common packages
+  apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Install additional packages if defined
+  apt:
+    name: "{{ additional_packages | default([]) }}"
+    state: present
+  when: additional_packages is defined
+
+- name: Remove unwanted packages if defined
+  apt:
+    name: "{{ packages_to_remove | default([]) }}"
+    state: absent
+  when: packages_to_remove is defined
+
+- name: Autoremove unused packages
+  apt:
+    autoremove: yes

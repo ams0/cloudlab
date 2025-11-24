@@ -1,0 +1,11 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: {{ flux_git_repository_name }}
+  namespace: {{ flux_namespace }}
+spec:
+  interval: 1m
+  url: {{ flux_git_url }}
+  ref:
+    branch: {{ flux_git_branch }}

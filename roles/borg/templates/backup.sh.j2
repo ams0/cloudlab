@@ -1,0 +1,93 @@
+#!/bin/bash
+# Borg Backup Script for {{ inventory_hostname }}
+
+set -e
+
+# Borg binary path
+BORG="{{ borg_binary_path if borg_install_method == 'binary' else 'borg' }}"
+
+# Export environment variables
+{% if borg_passphrase != "" %}
+export BORG_PASSPHRASE='{{ borg_passphrase }}'
+{% endif %}
+export BORG_REPO='{{ borg_repository }}'
+export BORG_RSH='ssh -i {{ borg_ssh_key }} -p {{ borg_ssh_port }}'
+{% if borg_remote_path is defined %}
+export BORG_REMOTE_PATH='{{ borg_remote_path }}'
+{% endif %}
+
+# Log file
+LOG_FILE="/var/log/borg-backup.log"
+
+# Function to log messages
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Function to send notification (you can customize this)
+notify() {
+    log "$1"
+    # Add notification logic here (email, webhook, etc.)
+}
+
+log "Starting backup for {{ inventory_hostname }}"
+
+# Check if repository exists, initialize if not
+if ! $BORG info "$BORG_REPO" >/dev/null 2>&1; then
+    log "Repository not found, initializing..."
+    $BORG init --encryption={{ borg_encryption }} "$BORG_REPO"
+    log "Repository initialized successfully"
+fi
+
+# Create backup
+log "Creating backup archive..."
+$BORG create \
+    --verbose \
+    --filter AME \
+    --list \
+    --stats \
+    --show-rc \
+    --compression {{ borg_compression }} \
+    {% for pattern in borg_exclude_patterns %}
+    --exclude '{{ pattern }}' \
+    {% endfor %}
+    "$BORG_REPO::{{ borg_backup_name }}" \
+    {% for path in borg_backup_paths %}
+    {{ path }} \
+    {% endfor %}
+
+backup_exit=$?
+
+# Prune old backups
+log "Pruning old backups..."
+$BORG prune \
+    --list \
+    --prefix '{{ inventory_hostname }}-' \
+    --show-rc \
+    --keep-daily {{ borg_keep_daily }} \
+    --keep-weekly {{ borg_keep_weekly }} \
+    --keep-monthly {{ borg_keep_monthly }} \
+    --keep-yearly {{ borg_keep_yearly }} \
+    "$BORG_REPO"
+
+prune_exit=$?
+
+# Compact repository
+log "Compacting repository..."
+$BORG compact "$BORG_REPO"
+
+compact_exit=$?
+
+# Global exit status
+global_exit=$(( backup_exit > prune_exit ? backup_exit : prune_exit ))
+global_exit=$(( global_exit > compact_exit ? global_exit : compact_exit ))
+
+if [ ${global_exit} -eq 0 ]; then
+    notify "Backup completed successfully"
+elif [ ${global_exit} -eq 1 ]; then
+    notify "Backup completed with warnings"
+else
+    notify "Backup failed with exit code ${global_exit}"
+fi
+
+exit ${global_exit}

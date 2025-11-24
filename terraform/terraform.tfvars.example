@@ -1,0 +1,51 @@
+# --- OCI API credentials ---
+tenancy_ocid        = "ocid1.tenancy.oc1..example"
+user_ocid           = "ocid1.user.oc1..example"
+compartment_ocid    = "ocid1.compartment.oc1..example"
+region              = "eu-frankfurt-1"
+api_fingerprint     = "aa:bb:cc:dd:ee"
+api_private_key_path = "~/.oci/oci_api_key.pem"
+
+# Uncomment to force a specific AD
+# availability_domain = "fVGM:EU-FRANKFURT-1-AD-1"
+
+project_name           = "kubespaces-singlehost"
+instance_display_name  = "kubespaces-control"
+instance_shape         = "VM.Standard.E5.Flex"
+instance_image_ocid    = "ocid1.image.oc1.eu-frankfurt-1.example"
+boot_volume_size_in_gbs = 50
+assign_public_ip       = true
+
+# Only set when using flex shapes; leave null for fixed shapes
+instance_ocpus          = 1
+instance_memory_in_gbs  = 16
+
+# Provide your SSH public key here
+ssh_public_key = "ssh-ed25519 AAAA... user@example"
+
+# Network settings
+vcn_cidr    = "10.20.0.0/16"
+subnet_cidr = "10.20.10.0/24"
+ssh_allowed_cidrs = [
+  "0.0.0.0/0"
+]
+
+# Optional
+freeform_tags = {
+  Environment = "lab"
+}
+
+# Example: allow HTTPS ingress
+extra_ingress_rules = [
+  {
+    protocol = "6"
+    source   = "0.0.0.0/0"
+    description = "HTTPS"
+    tcp_options = {
+      min = 443
+      max = 443
+    }
+  }
+]
+
+# cloud_init_template = file("cloud-init.yaml")

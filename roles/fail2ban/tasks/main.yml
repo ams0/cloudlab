@@ -1,0 +1,38 @@
+---
+- name: Install fail2ban
+  apt:
+    name: fail2ban
+    state: present
+    update_cache: yes
+
+- name: Ensure fail2ban config directory exists
+  file:
+    path: /etc/fail2ban
+    state: directory
+    mode: '0755'
+
+- name: Deploy fail2ban jail.local configuration
+  template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart fail2ban
+
+- name: Enable and start fail2ban service
+  systemd:
+    name: fail2ban
+    state: started
+    enabled: yes
+
+- name: Get fail2ban status
+  command: fail2ban-client status
+  register: fail2ban_status
+  changed_when: false
+  failed_when: false
+
+- name: Display fail2ban status
+  debug:
+    msg: "{{ fail2ban_status.stdout_lines }}"
+  when: fail2ban_status.rc == 0

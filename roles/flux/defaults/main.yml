@@ -1,0 +1,20 @@
+---
+# Flux configuration defaults
+
+# Flux CLI version
+flux_version: "v2.4.0"
+flux_arch: "arm64"
+
+# Flux namespace
+flux_namespace: "flux-system"
+
+# Git repository configuration
+flux_git_url: "https://github.com/ams0/ansible-singlehost"
+flux_git_branch: "main"
+flux_git_path: "./gitops"
+flux_git_repository_name: "flux-system"
+
+# Kustomization configuration
+flux_kustomization_name: "flux-system"
+flux_kustomization_interval: "10m"
+flux_kustomization_prune: true

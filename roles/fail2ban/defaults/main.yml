@@ -1,0 +1,30 @@
+---
+# fail2ban configuration defaults
+
+# General settings
+fail2ban_bantime: "1h"
+fail2ban_findtime: "10m"
+fail2ban_maxretry: 5
+fail2ban_destemail: "root@localhost"
+fail2ban_sender: "fail2ban@localhost"
+fail2ban_action: "%(action_)s"  # Only ban, don't send emails by default
+
+# Whitelist IPs (never ban these)
+fail2ban_ignoreip:
+  - "127.0.0.1/8"
+  - "::1"
+  - "95.99.46.198"  # Your IP
+
+# SSH jail configuration
+fail2ban_ssh_enabled: true
+fail2ban_ssh_port: "22"
+fail2ban_ssh_maxretry: 5
+fail2ban_ssh_bantime: "1h"
+
+# Additional jails to enable
+fail2ban_jails:
+  sshd:
+    enabled: true
+    port: "22"
+    maxretry: 5
+    bantime: "1h"

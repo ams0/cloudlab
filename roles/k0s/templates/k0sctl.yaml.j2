@@ -1,0 +1,40 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: {{ k0s_metadata_name }}
+spec:
+  hosts:
+  - role: controller+worker
+    localhost:
+      enabled: true
+  k0s:
+    version: null
+    config:
+      apiVersion: k0s.k0sproject.io/v1beta1
+      kind: ClusterConfig
+      metadata:
+        name: {{ k0s_cluster_name }}
+      spec:
+        api:
+          k0sApiPort: {{ k0s_api_k0s_port }}
+          port: {{ k0s_api_port }}
+          sans:
+{% for san in k0s_api_sans %}
+            - {{ san }}
+{% endfor %}
+        network:
+          kubeProxy:
+            disabled: false
+            mode: iptables
+          kuberouter:
+            autoMTU: true
+            mtu: 0
+            peerRouterASNs: ""
+            peerRouterIPs: ""
+          podCIDR: {{ k0s_pod_cidr }}
+          provider: kuberouter
+          serviceCIDR: {{ k0s_service_cidr }}
+        storage:
+          type: etcd
+        telemetry:
+          enabled: true

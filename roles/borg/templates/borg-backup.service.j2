@@ -1,0 +1,16 @@
+[Unit]
+Description=Borg Backup Service for {{ inventory_hostname }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/home/{{ borg_user }}/scripts/borg-backup.sh
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes

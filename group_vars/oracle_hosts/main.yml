@@ -1,0 +1,38 @@
+# Variables for oracle_hosts group
+---
+# System configuration
+timezone: "UTC"
+locale: "en_US.UTF-8"
+
+# Docker configuration
+docker_users:
+  - "{{ ansible_user }}"
+
+# Borg Backup configuration
+borg_repository: "{{ vault_borg_repository }}"
+borg_ssh_user: "{{ vault_borg_ssh_user }}"
+borg_ssh_host: "{{ vault_borg_ssh_host }}"
+borg_passphrase: "{{ vault_borg_passphrase }}"
+borg_ssh_key: "/home/ubuntu/.ssh/nas"  # Use existing SSH key
+borg_version: "1.4.1"  # Latest stable with ARM64 support
+borg_remote_path: "/usr/local/bin/borg"  # Full path to borg on Synology NAS
+borg_backup_paths:
+  - /home
+  - /root
+  - /etc
+  - /usr/local
+
+# Tailscale configuration
+tailscale_auth_key: "{{ vault_tailscale_auth_key }}"
+tailscale_hostname: "oracle-{{ inventory_hostname }}"
+
+# Datadog configuration
+datadog_api_key: "{{ vault_datadog_api_key }}"
+datadog_hostname: "oracle-vps"
+datadog_tags:
+  - "env:production"
+  - "role:oracle-host"
+  - "managed_by:ansible"
+datadog_logs_enabled: true
+datadog_process_agent_enabled: true
+datadog_apm_enabled: false

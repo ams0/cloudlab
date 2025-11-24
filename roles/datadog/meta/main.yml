@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: datadog
+  author: Your Name
+  description: Datadog Agent installation and configuration
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+  galaxy_tags:
+    - monitoring
+    - datadog
+    - observability
+    - metrics
+    - logs
+
+dependencies: []

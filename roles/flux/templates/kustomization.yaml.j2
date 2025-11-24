@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: {{ flux_kustomization_name }}
+  namespace: {{ flux_namespace }}
+spec:
+  interval: {{ flux_kustomization_interval }}
+  sourceRef:
+    kind: GitRepository
+    name: {{ flux_git_repository_name }}
+  path: {{ flux_git_path }}
+  prune: {{ flux_kustomization_prune | lower }}
+  wait: true
+  timeout: 5m

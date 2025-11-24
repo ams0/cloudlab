@@ -1,0 +1,24 @@
+# Borg Backup Configuration
+[repository]
+location = {{ borg_repository }}
+encryption = {{ borg_encryption }}
+compression = {{ borg_compression }}
+
+[ssh]
+{% if borg_ssh_host != "" %}
+host = {{ borg_ssh_host }}
+port = {{ borg_ssh_port }}
+user = {{ borg_ssh_user }}
+key_file = {{ borg_ssh_key }}
+{% endif %}
+
+[backup]
+archive_name = {{ borg_backup_name }}
+paths = {{ borg_backup_paths | join(' ') }}
+exclude_patterns = {{ borg_exclude_patterns | join(',') }}
+
+[retention]
+keep_daily = {{ borg_keep_daily }}
+keep_weekly = {{ borg_keep_weekly }}
+keep_monthly = {{ borg_keep_monthly }}
+keep_yearly = {{ borg_keep_yearly }}

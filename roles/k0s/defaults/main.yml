@@ -1,0 +1,25 @@
+---
+# k0s configuration defaults
+
+# k0sctl version
+k0sctl_version: "v0.19.4"
+k0sctl_arch: "arm64"
+
+# k0s cluster configuration
+k0s_cluster_name: "k0s"
+k0s_metadata_name: "vps"
+
+# Network configuration
+k0s_pod_cidr: "10.244.0.0/16"
+k0s_service_cidr: "10.96.0.0/12"
+k0s_api_port: 6443
+k0s_api_k0s_port: 9443
+
+# Konnectivity ports
+k0s_konnectivity_admin_port: 8133
+k0s_konnectivity_agent_port: 8132
+
+# External access
+k0s_external_hostname: "vps.kubespaces.cloud"
+k0s_api_sans:
+  - "{{ k0s_external_hostname }}"

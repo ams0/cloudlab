@@ -1,0 +1,117 @@
+---
+- name: Check if Flux CLI is already installed
+  stat:
+    path: /usr/local/bin/flux
+  register: flux_cli_installed
+
+- name: Download Flux CLI
+  get_url:
+    url: "https://github.com/fluxcd/flux2/releases/download/{{ flux_version }}/flux_{{ flux_version | regex_replace('^v', '') }}_linux_{{ flux_arch }}.tar.gz"
+    dest: /tmp/flux.tar.gz
+    mode: '0644'
+  when: not flux_cli_installed.stat.exists
+
+- name: Extract Flux CLI
+  unarchive:
+    src: /tmp/flux.tar.gz
+    dest: /tmp/
+    remote_src: yes
+  when: not flux_cli_installed.stat.exists
+
+- name: Install Flux CLI
+  copy:
+    src: /tmp/flux
+    dest: /usr/local/bin/flux
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+  when: not flux_cli_installed.stat.exists
+
+- name: Clean up Flux download files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/flux.tar.gz
+    - /tmp/flux
+  when: not flux_cli_installed.stat.exists
+
+- name: Check if Flux is already installed in cluster
+  shell: k0s kubectl get namespace {{ flux_namespace }}
+  register: flux_namespace_exists
+  failed_when: false
+  changed_when: false
+
+- name: Install Flux in cluster
+  shell: flux install --namespace={{ flux_namespace }}
+  environment:
+    KUBECONFIG: /var/lib/k0s/pki/admin.conf
+  when: flux_namespace_exists.rc != 0
+  register: flux_install
+
+- name: Wait for Flux pods to be created
+  shell: k0s kubectl get pods -n {{ flux_namespace }} -l app.kubernetes.io/part-of=flux --no-headers | wc -l
+  register: flux_pods_count
+  until: flux_pods_count.stdout | int > 0
+  retries: 12
+  delay: 5
+  when: flux_install.changed
+  changed_when: false
+
+- name: Wait for Flux controllers to be ready
+  shell: k0s kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n {{ flux_namespace }} --timeout=300s
+  when: flux_install.changed
+  register: flux_ready
+  retries: 5
+  delay: 20
+  until: flux_ready.rc == 0
+
+- name: Create GitRepository manifest
+  template:
+    src: gitrepository.yaml.j2
+    dest: "/tmp/gitrepository-{{ flux_git_repository_name }}.yaml"
+    mode: '0644'
+
+- name: Apply GitRepository manifest
+  shell: k0s kubectl apply -f /tmp/gitrepository-{{ flux_git_repository_name }}.yaml
+  register: gitrepo_result
+  changed_when: "'configured' in gitrepo_result.stdout or 'created' in gitrepo_result.stdout"
+
+- name: Create Kustomization manifest
+  template:
+    src: kustomization.yaml.j2
+    dest: "/tmp/kustomization-{{ flux_kustomization_name }}.yaml"
+    mode: '0644'
+
+- name: Apply Kustomization manifest
+  shell: k0s kubectl apply -f /tmp/kustomization-{{ flux_kustomization_name }}.yaml
+  register: kustomization_result
+  changed_when: "'configured' in kustomization_result.stdout or 'created' in kustomization_result.stdout"
+
+- name: Clean up temporary manifests
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/tmp/gitrepository-{{ flux_git_repository_name }}.yaml"
+    - "/tmp/kustomization-{{ flux_kustomization_name }}.yaml"
+
+- name: Wait for Flux to reconcile
+  shell: flux reconcile kustomization {{ flux_kustomization_name }} --namespace {{ flux_namespace }}
+  environment:
+    KUBECONFIG: /var/lib/k0s/pki/admin.conf
+  register: flux_reconcile
+  failed_when: false
+  changed_when: false
+
+- name: Get Flux status
+  shell: flux get all -A
+  environment:
+    KUBECONFIG: /var/lib/k0s/pki/admin.conf
+  register: flux_status
+  changed_when: false
+
+- name: Display Flux status
+  debug:
+    msg: "{{ flux_status.stdout_lines }}"

@@ -1,0 +1,5 @@
+---
+# Claude Code CLI configuration defaults
+claude_code_version: "latest"
+claude_code_install_path: "/usr/local/bin/claude"
+claude_code_user: "{{ ansible_user }}"

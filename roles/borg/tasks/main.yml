@@ -1,0 +1,171 @@
+---
+- name: Install minimal Borg dependencies
+  apt:
+    name:
+      - openssh-client
+      - curl
+    state: present
+    update_cache: yes
+
+- name: Install Borg dependencies for pip method
+  apt:
+    name:
+      - python3-pip
+      - python3-dev
+      - python3-venv
+      - build-essential
+      - libssl-dev
+      - libacl1-dev
+      - liblz4-dev
+      - libzstd-dev
+      - libb2-dev
+      - pkg-config
+    state: present
+    update_cache: yes
+  when: borg_install_method == "pip"
+
+- name: Install borgbackup via pip
+  pip:
+    name: "borgbackup=={{ borg_version }}.*"
+    state: present
+    executable: pip3
+  when: borg_install_method == "pip"
+
+- name: Check system architecture
+  set_fact:
+    borg_binary_url: "{{ borg_binary_url_arm64 if ansible_architecture == 'aarch64' else borg_binary_url_x64 }}"
+  when: borg_install_method == "binary"
+
+- name: Download BorgBackup binary
+  get_url:
+    url: "{{ borg_binary_url }}"
+    dest: "{{ borg_binary_path }}"
+    mode: '0755'
+    owner: root
+    group: root
+    checksum: "{{ 'sha256:' + borg_binary_checksum if borg_binary_checksum != '' else omit }}"
+    backup: yes
+  when: borg_install_method == "binary"
+
+- name: Verify Borg installation
+  shell: "{{ borg_binary_path if borg_install_method == 'binary' else 'borg' }} --version"
+  register: borg_version_check
+  changed_when: false
+  failed_when: borg_version_check.rc != 0
+
+- name: Display installed Borg version
+  debug:
+    msg: "Installed BorgBackup: {{ borg_version_check.stdout }}"
+
+- name: Create borg directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+  loop:
+    - "/home/{{ borg_user }}/.config/borg"
+    - "/home/{{ borg_user }}/.cache/borg"
+    - "/home/{{ borg_user }}/scripts"
+
+- name: Check if SSH key exists
+  stat:
+    path: "{{ borg_ssh_key }}"
+  register: borg_ssh_key_exists
+
+- name: Generate SSH key for borg backup
+  openssh_keypair:
+    path: "{{ borg_ssh_key }}"
+    type: ed25519
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0600'
+  when: 
+    - borg_ssh_host != ""
+    - not borg_ssh_key_exists.stat.exists
+
+- name: Create borg configuration
+  template:
+    src: borg.conf.j2
+    dest: "/home/{{ borg_user }}/.config/borg/config"
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0600'
+
+- name: Create backup script
+  template:
+    src: backup.sh.j2
+    dest: "/home/{{ borg_user }}/scripts/borg-backup.sh"
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+
+- name: Create restore script
+  template:
+    src: restore.sh.j2
+    dest: "/home/{{ borg_user }}/scripts/borg-restore.sh"
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+
+- name: Set up borg passphrase environment
+  lineinfile:
+    path: "/home/{{ borg_user }}/.bashrc"
+    line: "export BORG_PASSPHRASE='{{ borg_passphrase }}'"
+    regexp: "^export BORG_PASSPHRASE="
+    state: present
+  when: borg_passphrase != ""
+  no_log: true
+
+- name: Create borg log file
+  file:
+    path: /var/log/borg-backup.log
+    state: touch
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0644'
+  changed_when: false
+
+- name: Add NAS host key to root's known_hosts
+  known_hosts:
+    name: "{{ borg_ssh_host }}"
+    key: "{{ lookup('pipe', 'ssh-keyscan -H ' + borg_ssh_host) }}"
+    state: present
+    path: /root/.ssh/known_hosts
+  when: borg_ssh_host != ""
+
+- name: Create systemd service for borg backup
+  template:
+    src: borg-backup.service.j2
+    dest: /etc/systemd/system/borg-backup.service
+    mode: '0644'
+  notify: reload systemd
+
+- name: Create systemd timer for borg backup
+  template:
+    src: borg-backup.timer.j2
+    dest: /etc/systemd/system/borg-backup.timer
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable and start borg backup timer
+  systemd:
+    name: borg-backup.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Display SSH public key for remote server setup
+  shell: "cat {{ borg_ssh_key }}.pub"
+  become_user: "{{ borg_user }}"
+  register: borg_ssh_public_key
+  when: borg_ssh_host != ""
+  changed_when: false
+
+- name: Show SSH public key
+  debug:
+    msg: |
+      Add this SSH public key to your backup server:
+      {{ borg_ssh_public_key.stdout | default('SSH key not generated - check borg_ssh_host configuration') }}
+  when: borg_ssh_host != ""

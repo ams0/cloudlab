@@ -1,0 +1,64 @@
+#!/bin/bash
+# Borg Restore Script for {{ inventory_hostname }}
+
+set -e
+
+# Borg binary path
+BORG="{{ borg_binary_path if borg_install_method == 'binary' else 'borg' }}"
+
+# Export environment variables
+{% if borg_passphrase != "" %}
+export BORG_PASSPHRASE='{{ borg_passphrase }}'
+{% endif %}
+export BORG_REPO='{{ borg_repository }}'
+export BORG_RSH='ssh -i {{ borg_ssh_key }} -p {{ borg_ssh_port }}'
+
+# Function to show usage
+usage() {
+    echo "Usage: $0 [list|restore] [archive_name] [restore_path]"
+    echo ""
+    echo "Commands:"
+    echo "  list                     - List all available archives"
+    echo "  restore <archive> <path> - Restore specific archive to path"
+    echo ""
+    echo "Examples:"
+    echo "  $0 list"
+    echo "  $0 restore {{ inventory_hostname }}-2024-01-01T00:00:00 /tmp/restore"
+    exit 1
+}
+
+# Check arguments
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+case "$1" in
+    "list")
+        echo "Available archives in repository:"
+        $BORG list --short "$BORG_REPO"
+        ;;
+    "restore")
+        if [ $# -ne 3 ]; then
+            echo "Error: restore command requires archive name and restore path"
+            usage
+        fi
+        
+        ARCHIVE="$2"
+        RESTORE_PATH="$3"
+        
+        echo "Restoring archive '$ARCHIVE' to '$RESTORE_PATH'"
+        mkdir -p "$RESTORE_PATH"
+        
+        $BORG extract \
+            --verbose \
+            --list \
+            "$BORG_REPO::$ARCHIVE" \
+            --destination "$RESTORE_PATH"
+        
+        echo "Restore completed successfully to: $RESTORE_PATH"
+        ;;
+    *)
+        echo "Error: Unknown command '$1'"
+        usage
+        ;;
+esac

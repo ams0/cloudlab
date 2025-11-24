@@ -1,0 +1,34 @@
+---
+- name: Configure Oracle Host
+  hosts: oracle_hosts
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - role: common
+      tags: [common, always]
+    - role: packages
+      tags: [packages]
+    - role: fail2ban
+      tags: [fail2ban, security]
+    - role: cron
+      tags: [cron]
+    - role: docker
+      tags: [docker]
+    - role: tailscale
+      tags: [tailscale]
+    - role: borg
+      tags: [borg, backup]
+    - role: datadog
+      tags: [datadog, monitoring]
+    - role: k0s
+      tags: [k0s, kubernetes]
+    - role: flux
+      tags: [flux, gitops]
+    - role: claude-code
+      tags: [claude-code, tools]
+
+  tasks:
+    - name: Display host information
+      debug:
+        msg: "Successfully configured {{ inventory_hostname }} ({{ ansible_default_ipv4.address }})"

@@ -1,0 +1,34 @@
+# Fail2Ban configuration
+# Managed by Ansible - do not edit manually
+
+[DEFAULT]
+# Ban hosts for one hour:
+bantime = {{ fail2ban_bantime }}
+
+# A host is banned if it has generated "maxretry" during the last "findtime"
+findtime = {{ fail2ban_findtime }}
+
+# "maxretry" is the number of failures before a host get banned.
+maxretry = {{ fail2ban_maxretry }}
+
+# Destination email address used solely for the interpolations in
+# jail.{conf,local} configuration files.
+destemail = {{ fail2ban_destemail }}
+
+# Sender email address used solely for some actions
+sender = {{ fail2ban_sender }}
+
+# Default action
+action = {{ fail2ban_action }}
+
+# IPs/networks to ignore (whitelist)
+ignoreip = {{ fail2ban_ignoreip | join(' ') }}
+
+# SSH jail
+[sshd]
+enabled = {{ fail2ban_jails.sshd.enabled | lower }}
+port = {{ fail2ban_jails.sshd.port }}
+maxretry = {{ fail2ban_jails.sshd.maxretry }}
+bantime = {{ fail2ban_jails.sshd.bantime }}
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s

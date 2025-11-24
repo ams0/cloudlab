@@ -1,0 +1,22 @@
+---
+# Tailscale configuration defaults
+
+# Authentication
+tailscale_auth_key: ""  # Must be set in group_vars or host_vars
+tailscale_auth_key_file: ""  # Alternative: path to file containing auth key
+
+# Configuration
+tailscale_hostname: "{{ inventory_hostname }}"
+tailscale_advertise_routes: []  # List of CIDR blocks to advertise
+tailscale_accept_routes: true
+tailscale_accept_dns: true
+tailscale_exit_node: false
+tailscale_advertise_exit_node: false
+tailscale_shields_up: false
+
+# Service configuration
+tailscale_service_enabled: true
+tailscale_service_state: started
+
+# Advanced options
+tailscale_extra_args: []

@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: common
+  author: Your Name
+  description: Common system setup and configuration
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies: []

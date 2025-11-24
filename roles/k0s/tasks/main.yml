@@ -1,0 +1,201 @@
+---
+- name: Check if k0sctl is already installed
+  stat:
+    path: /usr/local/bin/k0sctl
+  register: k0sctl_installed
+
+- name: Download k0sctl
+  get_url:
+    url: "https://github.com/k0sproject/k0sctl/releases/download/{{ k0sctl_version }}/k0sctl-linux-{{ k0sctl_arch }}"
+    dest: /usr/local/bin/k0sctl
+    mode: '0755'
+  when: not k0sctl_installed.stat.exists
+
+- name: Create k0s config directory
+  file:
+    path: /etc/k0s
+    state: directory
+    mode: '0755'
+
+- name: Generate k0sctl configuration
+  template:
+    src: k0sctl.yaml.j2
+    dest: /etc/k0s/k0sctl.yaml
+    mode: '0644'
+  register: k0sctl_config
+
+- name: Check if k0s is already installed
+  stat:
+    path: /usr/local/bin/k0s
+  register: k0s_installed
+
+- name: Apply k0sctl configuration
+  command: k0sctl apply --config /etc/k0s/k0sctl.yaml
+  when: not k0s_installed.stat.exists
+  register: k0sctl_apply
+  async: 600
+  poll: 10
+
+- name: Check if API server certificate exists
+  stat:
+    path: /var/lib/k0s/pki/server.crt
+  register: api_cert
+
+- name: Check certificate expiration
+  shell: |
+    if [ -f /var/lib/k0s/pki/server.crt ]; then
+      openssl x509 -in /var/lib/k0s/pki/server.crt -noout -checkend 0 && echo "valid" || echo "expired"
+    else
+      echo "missing"
+    fi
+  register: cert_status
+  changed_when: false
+  when: api_cert.stat.exists
+
+- name: Update k0s configuration and regenerate certificates
+  block:
+    - name: Extract k0s config from k0sctl
+      shell: |
+        grep -A 1000 "kind: ClusterConfig" /etc/k0s/k0sctl.yaml > /etc/k0s/k0s.yaml
+      changed_when: true
+
+    - name: Stop k0s controller
+      systemd:
+        name: k0scontroller
+        state: stopped
+
+    - name: Remove old API server certificates
+      file:
+        path: "/var/lib/k0s/pki/{{ item }}"
+        state: absent
+      loop:
+        - server.crt
+        - server.key
+        - apiserver-kubelet-client.crt
+        - apiserver-kubelet-client.key
+        - admin.conf
+
+    - name: Start k0s controller
+      systemd:
+        name: k0scontroller
+        state: started
+
+    - name: Wait for API server to regenerate certificates
+      wait_for:
+        port: "{{ k0s_api_port }}"
+        host: localhost
+        timeout: 120
+        delay: 10
+  when: >
+    (k0sctl_config.changed and k0s_installed.stat.exists) or
+    (api_cert.stat.exists and cert_status.stdout == "expired")
+
+- name: Wait for k0s to be ready
+  wait_for:
+    port: "{{ k0s_api_port }}"
+    host: localhost
+    timeout: 300
+  when: k0sctl_apply.changed
+
+- name: Allow k0s API port through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ k0s_api_port }}"
+    jump: ACCEPT
+    comment: "k0s API server"
+    action: insert
+    rule_num: "1"
+
+- name: Install iptables-persistent
+  apt:
+    name: iptables-persistent
+    state: present
+    update_cache: no
+
+- name: Save iptables rules
+  shell: netfilter-persistent save
+  changed_when: false
+
+- name: Create .kube directory for user
+  file:
+    path: "/home/{{ ansible_user }}/.kube"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Wait for k0s admin config to be ready
+  stat:
+    path: /var/lib/k0s/pki/admin.conf
+  register: admin_conf
+  until: admin_conf.stat.exists
+  retries: 30
+  delay: 5
+
+- name: Get k0s kubeconfig
+  command: k0s kubeconfig admin
+  register: k0s_kubeconfig_content
+  changed_when: false
+
+- name: Save kubeconfig for user
+  copy:
+    content: "{{ k0s_kubeconfig_content.stdout }}"
+    dest: "/home/{{ ansible_user }}/.kube/config"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0600'
+
+- name: Create kubectl wrapper script
+  copy:
+    content: |
+      #!/bin/bash
+      exec k0s kubectl "$@"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Wait for k0s node to be ready
+  shell: k0s kubectl get nodes
+  register: node_check
+  until: "'NotReady' not in node_check.stdout"
+  retries: 30
+  delay: 10
+  changed_when: false
+
+- name: Remove control-plane taint to allow pod scheduling
+  shell: k0s kubectl taint nodes --all node-role.kubernetes.io/control-plane:NoSchedule-
+  register: taint_removal
+  failed_when: false
+  changed_when: taint_removal.rc == 0
+
+- name: Display k0s cluster status
+  shell: k0s kubectl get nodes -o wide
+  register: k0s_nodes
+  changed_when: false
+
+- name: Show k0s cluster info
+  debug:
+    msg:
+      - "k0s cluster is ready!"
+      - "{{ k0s_nodes.stdout_lines }}"
+
+- name: Fetch kubeconfig from remote server
+  fetch:
+    src: "/home/{{ ansible_user }}/.kube/config"
+    dest: "{{ playbook_dir }}/kubeconfig-remote"
+    flat: yes
+
+- name: Update kubeconfig server URL
+  replace:
+    path: "{{ playbook_dir }}/kubeconfig-remote"
+    regexp: 'server: https://[^:]+:{{ k0s_api_port }}'
+    replace: 'server: https://{{ k0s_external_hostname }}:{{ k0s_api_port }}'
+  delegate_to: localhost
+  become: no
+
+- name: Display kubeconfig location
+  debug:
+    msg:
+      - "Kubeconfig saved to: {{ playbook_dir }}/kubeconfig-remote"
+      - "Use: export KUBECONFIG={{ playbook_dir }}/kubeconfig-remote"
+      - "Or: kubectl --kubeconfig {{ playbook_dir }}/kubeconfig-remote get nodes"
