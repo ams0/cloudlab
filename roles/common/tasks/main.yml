@@ -104,6 +104,24 @@
     action: insert
     rule_num: "1"
 
+- name: Allow port 9000 through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 9000
+    jump: ACCEPT
+    comment: "Port 9000"
+    action: insert
+    rule_num: "1"
+
+- name: Ensure ufw is disabled
+  systemd:
+    name: ufw
+    state: stopped
+    enabled: no
+  failed_when: false
+  ignore_errors: yes
+
 - name: Save iptables rules
   shell: netfilter-persistent save
   changed_when: false
