@@ -245,6 +245,30 @@ resource "oci_core_security_list" "this" {
     }
   }
 
+  # Allow port 9000
+  ingress_security_rules {
+    protocol    = "6"
+    source      = "0.0.0.0/0"
+    description = "Port 9000"
+
+    tcp_options {
+      min = 9000
+      max = 9000
+    }
+  }
+
+  # Allow port 9000 over IPv6
+  ingress_security_rules {
+    protocol    = "6"
+    source      = "::/0"
+    description = "Port 9000 over IPv6"
+
+    tcp_options {
+      min = 9000
+      max = 9000
+    }
+  }
+
   dynamic "ingress_security_rules" {
     for_each = var.extra_ingress_rules
     content {
