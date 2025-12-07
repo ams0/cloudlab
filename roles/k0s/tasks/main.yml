@@ -199,3 +199,19 @@
       - "Kubeconfig saved to: {{ playbook_dir }}/kubeconfig-remote"
       - "Use: export KUBECONFIG={{ playbook_dir }}/kubeconfig-remote"
       - "Or: kubectl --kubeconfig {{ playbook_dir }}/kubeconfig-remote get nodes"
+
+- name: Create Datadog namespace
+  shell: |
+    k0s kubectl create namespace datadog --dry-run=client -o yaml | k0s kubectl apply -f -
+  register: datadog_ns_result
+  changed_when: "'created' in datadog_ns_result.stdout or 'configured' in datadog_ns_result.stdout"
+
+- name: Create Datadog API key secret
+  shell: |
+    k0s kubectl create secret generic datadog-api-key \
+      --from-literal=api-key={{ vault_datadog_api_key }} \
+      --namespace=datadog \
+      --dry-run=client -o yaml | k0s kubectl apply -f -
+  register: datadog_secret_result
+  changed_when: "'created' in datadog_secret_result.stdout or 'configured' in datadog_secret_result.stdout"
+  no_log: true
