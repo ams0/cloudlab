@@ -4,9 +4,3 @@ kind: Kustomization
 resources:
 - webhook-token-secret.yaml
 - flux-receiver.yaml
-
-secretGenerator:
-- name: webhook-token
-  namespace: flux-system
-  literals:
-  - token=$(head -c 12 /dev/urandom | shasum | cut -d ' ' -f1)
