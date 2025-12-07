@@ -16,5 +16,5 @@ flux_git_repository_name: "flux-system"
 
 # Kustomization configuration
 flux_kustomization_name: "flux-system"
-flux_kustomization_interval: "10m"
+flux_kustomization_interval: "1m"
 flux_kustomization_prune: true
