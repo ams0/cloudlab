@@ -4,5 +4,5 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - n8n-db-helmrelease.yaml
-  - helmrelease.yaml
+  - n8n-helmrelease.yaml
   - httproute.yaml
