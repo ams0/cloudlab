@@ -26,13 +26,7 @@ borg_remote_path: ""  # Full path to borg on remote server (e.g., /usr/local/bin
 
 # Backup configuration
 borg_backup_name: "{{ inventory_hostname }}-{now}"
-borg_backup_paths:
-  - /etc
-  - /home
-  - /root
-  - /var/log
-  - /opt/local-path-provisioner
-  - /usr/local
+# borg_backup_paths - Define in group_vars for flexibility per environment
 
 borg_exclude_patterns:
   - "*.cache"
