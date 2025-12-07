@@ -1,0 +1,25 @@
+---
+- name: Generate random webhook token
+  shell: head -c 12 /dev/urandom | shasum | cut -d ' ' -f1
+  register: webhook_token_output
+  changed_when: false
+
+- name: Set webhook token fact
+  set_fact:
+    webhook_token: "{{ webhook_token_output.stdout }}"
+
+- name: Check if webhook token secret exists
+  shell: kubectl -n flux-system get secret webhook-token
+  register: secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create webhook token secret
+  shell: |
+    kubectl -n flux-system create secret generic webhook-token \
+      --from-literal=token={{ webhook_token }}
+  when: secret_check.rc != 0
+
+- name: Display webhook token
+  debug:
+    msg: "Webhook token: {{ webhook_token }}"
