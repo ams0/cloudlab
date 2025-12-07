@@ -23,6 +23,8 @@ spec:
     remediation:
       retries: 3
   values:
+    valkey:
+      enabled: true
     image:
       tag: "2.0.0-rc.4"
     # Database configuration
