@@ -56,6 +56,15 @@
   when: flux_namespace_exists.rc != 0
   register: flux_install
 
+- name: Upgrade Flux in cluster if CLI was upgraded
+  shell: flux install --namespace={{ flux_namespace }}
+  environment:
+    KUBECONFIG: /var/lib/k0s/pki/admin.conf
+  when:
+    - flux_namespace_exists.rc == 0
+    - flux_installed_version != flux_target_version
+  register: flux_upgrade
+
 - name: Wait for Flux pods to be created
   shell: k0s kubectl get pods -n {{ flux_namespace }} -l app.kubernetes.io/part-of=flux --no-headers | wc -l
   register: flux_pods_count
