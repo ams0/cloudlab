@@ -4,3 +4,5 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - n8n-db-helmrelease.yaml
+  - helmrepository.yaml
+  - helmrelease.yaml
