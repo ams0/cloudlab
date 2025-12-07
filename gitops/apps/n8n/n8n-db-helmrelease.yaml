@@ -1,9 +1,12 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: n8n
+  name: n8n-database
   namespace: flux-system
+  labels:
+    app: n8n
+    purpose: n8n-database
 spec:
   interval: 10m
   timeout: 5m
@@ -36,6 +39,9 @@ spec:
       instances: 1
       initdb:
         database: n8n
+        encoding: UTF8
+        localeCType: C
+        localeCollate: C
         owner: n8n
     backups:
       enabled: false
