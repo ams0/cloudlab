@@ -38,14 +38,19 @@ spec:
             fromSecret:
               name: n8n-n8n-database-cluster-app
               key: password
-
-    # Persistence for n8n data
-    persistence:
-      enabled: true
-      type: dynamic
-      size: 10Gi
-      storageClass: local-path
-
+    main:
+      # Persistence for n8n data
+      persistence:
+        enabled: true
+        type: dynamic
+        size: 10Gi
+        storageClass: local-path
+    worker:
+      enabled: "true"
+      persistence: 
+        enabled: true
+        type: dynamic
+        size: 10Gi
     # Ingress configuration (disabled for now, will use Gateway API)
     ingress:
       enabled: false
