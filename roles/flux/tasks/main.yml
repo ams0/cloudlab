@@ -1,24 +1,30 @@
 ---
-- name: Check if Flux CLI is already installed
-  stat:
-    path: /usr/local/bin/flux
-  register: flux_cli_installed
+- name: Check current Flux CLI version
+  shell: /usr/local/bin/flux --version 2>/dev/null | grep -oP 'flux version \K[0-9.]+' || echo "0.0.0"
+  register: flux_current_version
+  changed_when: false
+  failed_when: false
+
+- name: Set version comparison facts
+  set_fact:
+    flux_target_version: "{{ flux_version | regex_replace('^v', '') }}"
+    flux_installed_version: "{{ flux_current_version.stdout }}"
 
 - name: Download Flux CLI
   get_url:
     url: "https://github.com/fluxcd/flux2/releases/download/{{ flux_version }}/flux_{{ flux_version | regex_replace('^v', '') }}_linux_{{ flux_arch }}.tar.gz"
     dest: /tmp/flux.tar.gz
     mode: '0644'
-  when: not flux_cli_installed.stat.exists
+  when: flux_installed_version != flux_target_version
 
 - name: Extract Flux CLI
   unarchive:
     src: /tmp/flux.tar.gz
     dest: /tmp/
     remote_src: yes
-  when: not flux_cli_installed.stat.exists
+  when: flux_installed_version != flux_target_version
 
-- name: Install Flux CLI
+- name: Install/Upgrade Flux CLI
   copy:
     src: /tmp/flux
     dest: /usr/local/bin/flux
@@ -26,7 +32,7 @@
     owner: root
     group: root
     remote_src: yes
-  when: not flux_cli_installed.stat.exists
+  when: flux_installed_version != flux_target_version
 
 - name: Clean up Flux download files
   file:
@@ -35,7 +41,7 @@
   loop:
     - /tmp/flux.tar.gz
     - /tmp/flux
-  when: not flux_cli_installed.stat.exists
+  when: flux_installed_version != flux_target_version
 
 - name: Check if Flux is already installed in cluster
   shell: k0s kubectl get namespace {{ flux_namespace }}
