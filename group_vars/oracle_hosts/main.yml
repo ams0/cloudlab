@@ -23,6 +23,22 @@ borg_backup_paths:
   - /var/log
   - /opt/local-path-provisioner
   - /usr/local
+borg_exclude_patterns:
+  - "*.cache"
+  - "*/cache/*"
+  - "*/fonts/*"
+  - "*/tmp/*"
+  - "*/temp/*"
+  - "*.tmp"
+  - "*.temp"
+  - "*/.git/*"
+  - "*/node_modules/*"
+  - "*/__pycache__/*"
+  - "*/venv/*"
+  - "*/virtualenv/*"
+  - "*/.vscode-server/*"
+  - "*/.npm/*"
+  - "*/.claude/*"
 
 # Tailscale configuration
 tailscale_auth_key: "{{ vault_tailscale_auth_key }}"
