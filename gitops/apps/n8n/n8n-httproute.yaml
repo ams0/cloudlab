@@ -6,8 +6,9 @@ metadata:
   namespace: n8n
 spec:
   parentRefs:
-    - name: main-gateway
-      namespace: default
+    - name: gateway
+      namespace: istio-system
+      sectionName: http   # listener name on the Gateway
   hostnames:
     - "n8n.vps.kubespaces.cloud"  # Change this to your actual domain
   rules:
@@ -16,5 +17,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: n8n
+        - name: n8n-n8n
           port: 5678
