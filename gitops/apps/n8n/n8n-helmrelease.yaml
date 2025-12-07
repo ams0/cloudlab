@@ -34,8 +34,9 @@ spec:
       postgresql: "18"
     cluster:
       instances: 1
-      initdb:
-        database: n8n
-        owner: n8n
+      bootstrap:
+        initdb:
+          database: n8n
+          owner: n8n
     backups:
       enabled: false
