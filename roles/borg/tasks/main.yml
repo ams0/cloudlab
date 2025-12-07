@@ -109,6 +109,14 @@
     group: "{{ borg_group }}"
     mode: '0755'
 
+- name: Create verify script
+  template:
+    src: verify.sh.j2
+    dest: "/home/{{ borg_user }}/scripts/borg-verify.sh"
+    owner: "{{ borg_user }}"
+    group: "{{ borg_group }}"
+    mode: '0755'
+
 - name: Set up borg passphrase environment
   lineinfile:
     path: "/home/{{ borg_user }}/.bashrc"
