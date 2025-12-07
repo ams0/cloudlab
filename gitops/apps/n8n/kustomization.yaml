@@ -6,3 +6,4 @@ resources:
   - n8n-db-helmrelease.yaml
   - helmrepository.yaml
   - helmrelease.yaml
+  - httproute.yaml
