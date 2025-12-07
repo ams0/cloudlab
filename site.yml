@@ -25,6 +25,8 @@
       tags: [k0s, kubernetes]
     - role: flux
       tags: [flux, gitops]
+    - role: flux-webhook
+      tags: [flux-webhook, gitops]
     - role: claude-code
       tags: [claude-code, tools]
 
