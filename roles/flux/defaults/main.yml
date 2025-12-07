@@ -2,7 +2,7 @@
 # Flux configuration defaults
 
 # Flux CLI version
-flux_version: "v2.4.0"
+flux_version: "v2.7.5"
 flux_arch: "arm64"
 
 # Flux namespace
