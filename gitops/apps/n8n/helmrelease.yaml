@@ -10,11 +10,8 @@ spec:
   targetNamespace: n8n
   chart:
     spec:
-      chart: n8n
-      sourceRef:
-        kind: OCIRepository
-        name: n8n
-        namespace: flux-system
+      chart: oci://8gears.container-registry.com/library/n8n
+      version: ">=0.25.0"
       interval: 1m
   install:
     createNamespace: true
