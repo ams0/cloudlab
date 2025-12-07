@@ -42,6 +42,7 @@ spec:
     # Persistence for n8n data
     persistence:
       enabled: true
+      type: dynamic
       size: 10Gi
       storageClass: local-path
 
