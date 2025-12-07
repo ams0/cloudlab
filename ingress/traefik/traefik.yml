@@ -1,5 +1,10 @@
 # Traefik Static Configuration
-
+experimental:
+  plugins:
+    fail2ban:
+      moduleName: "github.com/tomMoulard/fail2ban"
+      version: "v0.8.9"
+      
 api:
   dashboard: true
   insecure: false  # Disable insecure access on port 8080

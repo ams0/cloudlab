@@ -30,7 +30,7 @@ services:
       - "traefik.http.routers.traefik-dashboard.tls=true"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
-      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
+      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth,fail2ban@file"
 
       # Basic auth for dashboard security
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2y$$05$$ZV29JTIroQmmo/bRLamjB.zzZBO/sprB2qMCstsMTm3uQ.M9Tfipm"
