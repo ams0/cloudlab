@@ -71,12 +71,12 @@
   until: flux_pods_count.stdout | int > 0
   retries: 12
   delay: 5
-  when: flux_install.changed
+  when: flux_install.changed or flux_upgrade.changed
   changed_when: false
 
 - name: Wait for Flux controllers to be ready
   shell: k0s kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n {{ flux_namespace }} --timeout=300s
-  when: flux_install.changed
+  when: flux_install.changed or flux_upgrade.changed
   register: flux_ready
   retries: 5
   delay: 20
