@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
 - flux-receiver.yaml
+- httproute-flux-receiver.yaml
