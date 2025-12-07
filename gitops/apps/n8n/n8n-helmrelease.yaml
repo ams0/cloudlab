@@ -53,7 +53,7 @@ spec:
         size: 10Gi
         storageClass: local-path
     worker:
-      enabled: "true"
+      enabled: false
       persistence: 
         enabled: true
         type: dynamic
