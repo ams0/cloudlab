@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gw-options
+  namespace: istio-system
+data:
+  service: |
+    spec:
+      type: NodePort

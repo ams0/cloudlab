@@ -1,0 +1,46 @@
+# Traefik Static Configuration
+
+api:
+  dashboard: true
+  insecure: false  # Disable insecure access on port 8080
+
+entryPoints:
+  web:
+    address: ":80"
+    # Global HTTP to HTTPS redirect
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: letsencrypt
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false  # Only expose containers with traefik.enable=true
+    network: traefik
+  file:
+    filename: /dynamic.yml
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@kubespaces.cloud  # Change this to your email
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
+
+log:
+  level: INFO
+  format: common
+
+accessLog:
+  format: common

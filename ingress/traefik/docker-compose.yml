@@ -1,0 +1,41 @@
+services:
+  traefik:
+    image: traefik:v2.11
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Configure your email for LetsEncrypt
+      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL=admin@kubespaces.cloud
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./dynamic.yml:/dynamic.yml:ro
+      - ./acme.json:/acme.json
+    labels:
+      # Enable Traefik for this container
+      - "traefik.enable=true"
+
+      # Dashboard
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.vps.kubespaces.cloud`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls=true"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=dashboard-auth"
+
+      # Basic auth for dashboard security
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$2y$$05$$ZV29JTIroQmmo/bRLamjB.zzZBO/sprB2qMCstsMTm3uQ.M9Tfipm"
+
+networks:
+  traefik:
+    name: traefik
+    driver: bridge

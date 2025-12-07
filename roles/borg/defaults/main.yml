@@ -31,11 +31,13 @@ borg_backup_paths:
   - /home
   - /root
   - /var/log
-  - /opt
+  - /opt/local-path-provisioner
+  - /usr/local
 
 borg_exclude_patterns:
   - "*.cache"
   - "*/cache/*"
+  - "*/fonts/*"
   - "*/tmp/*"
   - "*/temp/*"
   - "*.tmp"
@@ -45,6 +47,9 @@ borg_exclude_patterns:
   - "*/__pycache__/*"
   - "*/venv/*"
   - "*/virtualenv/*"
+  - "*/.vscode-server/*"
+  - "*/.npm/*"
+  - "*/.claude/*"
 
 # Retention policy
 borg_keep_daily: 7

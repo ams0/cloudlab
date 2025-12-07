@@ -1,0 +1,17 @@
+http:
+  routers:
+    # HTTPS routers for all domains
+    backend:
+      rule: "Host(`n8n.vps.kubespaces.cloud`) || Host(`helix.vps.kubespaces.cloud`) || Host(`rancher.vps.kubespaces.cloud`)"
+      entryPoints:
+        - websecure
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    # Backend service pointing to localhost:30963 on the host
+    backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:30963"
