@@ -17,9 +17,11 @@ borg_ssh_key: "/home/ubuntu/.ssh/nas"  # Use existing SSH key
 borg_version: "1.4.1"  # Latest stable with ARM64 support
 borg_remote_path: "/usr/local/bin/borg"  # Full path to borg on Synology NAS
 borg_backup_paths:
+  - /etc
   - /home
   - /root
-  - /etc
+  - /var/log
+  - /opt/local-path-provisioner
   - /usr/local
 
 # Tailscale configuration
