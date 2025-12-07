@@ -11,9 +11,8 @@ spec:
   chart:
     spec:
       chart: n8n
-      version: ">=0.25.0"
       sourceRef:
-        kind: HelmRepository
+        kind: OCIRepository
         name: n8n
         namespace: flux-system
       interval: 1m
