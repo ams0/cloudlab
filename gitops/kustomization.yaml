@@ -5,6 +5,7 @@ resources:
 - namespace.yaml
 - gateway-api/experimental-install-v1.4.0.yaml
 - istio
+- cnpg
 - gateways/configmap.yaml
 - gateways/gateway.yaml
 - local-path-provisioner/local-path-provisioner.yaml
