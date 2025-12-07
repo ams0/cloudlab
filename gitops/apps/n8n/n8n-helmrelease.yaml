@@ -25,6 +25,11 @@ spec:
   values:
     valkey:
       enabled: true
+      replicaCount: 1
+      auth:
+        enabled: false
+      dataStorage:
+        enabled: false
     image:
       tag: "2.0.0-rc.4"
     # Database configuration
