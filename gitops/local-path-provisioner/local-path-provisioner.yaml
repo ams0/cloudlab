@@ -118,6 +118,8 @@ metadata:
   name: local-path
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
+  labels:
+    app: local-path-provisioner
 provisioner: rancher.io/local-path
 volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
