@@ -23,6 +23,7 @@ borg_backup_paths:
   - /var/log
   - /opt/local-path-provisioner
   - /usr/local
+  - /var/lib/docker
 borg_exclude_patterns:
   - "*.cache"
   - "*/cache/*"

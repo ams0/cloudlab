@@ -1,0 +1,239 @@
+#!/bin/bash
+# Borg Backup Verification Script for {{ inventory_hostname }}
+# Verifies backup integrity and reports on backup status
+
+set -e
+
+# Borg binary path
+BORG="{{ borg_binary_path if borg_install_method == 'binary' else 'borg' }}"
+
+# Export environment variables
+{% if borg_passphrase != "" %}
+export BORG_PASSPHRASE='{{ borg_passphrase }}'
+{% endif %}
+export BORG_REPO='{{ borg_repository }}'
+export BORG_RSH='ssh -i {{ borg_ssh_key }} -p {{ borg_ssh_port }}'
+{% if borg_remote_path is defined %}
+export BORG_REMOTE_PATH='{{ borg_remote_path }}'
+{% endif %}
+
+# Log file
+LOG_FILE="/var/log/borg-verify.log"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Function to log messages
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Function to print colored output
+print_status() {
+    local color=$1
+    shift
+    echo -e "${color}$@${NC}" | tee -a "$LOG_FILE"
+}
+
+# Function to check if repository is accessible
+check_repository() {
+    log "Checking repository accessibility..."
+
+    if $BORG info "$BORG_REPO" >/dev/null 2>&1; then
+        print_status "$GREEN" "✓ Repository is accessible"
+        return 0
+    else
+        print_status "$RED" "✗ Repository is not accessible"
+        return 1
+    fi
+}
+
+# Function to list recent archives
+list_recent_archives() {
+    log "Listing recent archives..."
+
+    echo ""
+    print_status "$BLUE" "Recent archives (last 10):"
+    $BORG list --short "$BORG_REPO" | tail -n 10
+    echo ""
+}
+
+# Function to check archive age
+check_archive_age() {
+    log "Checking age of latest backup..."
+
+    # Get the latest archive name and timestamp
+    latest_archive=$($BORG list --short "$BORG_REPO" | tail -n 1)
+
+    if [ -z "$latest_archive" ]; then
+        print_status "$RED" "✗ No archives found in repository"
+        return 1
+    fi
+
+    # Get archive info
+    archive_time=$($BORG info "$BORG_REPO::$latest_archive" 2>/dev/null | grep "Time (start)" | awk -F': ' '{print $2}')
+
+    if [ -z "$archive_time" ]; then
+        print_status "$YELLOW" "⚠ Could not determine archive timestamp"
+        return 0
+    fi
+
+    # Convert archive time to epoch
+    archive_epoch=$(date -d "$archive_time" +%s 2>/dev/null || echo "0")
+    current_epoch=$(date +%s)
+
+    # Calculate age in hours
+    age_seconds=$((current_epoch - archive_epoch))
+    age_hours=$((age_seconds / 3600))
+    age_days=$((age_hours / 24))
+
+    print_status "$GREEN" "✓ Latest archive: $latest_archive"
+
+    if [ $age_hours -lt 24 ]; then
+        print_status "$GREEN" "✓ Latest backup is ${age_hours} hours old (less than 24 hours)"
+    elif [ $age_days -lt 7 ]; then
+        print_status "$YELLOW" "⚠ Latest backup is ${age_days} days old (older than 24 hours)"
+    else
+        print_status "$RED" "✗ Latest backup is ${age_days} days old (WARNING: older than 7 days)"
+        return 1
+    fi
+
+    return 0
+}
+
+# Function to get repository statistics
+get_repository_stats() {
+    log "Getting repository statistics..."
+
+    echo ""
+    print_status "$BLUE" "Repository statistics:"
+    $BORG info "$BORG_REPO" | grep -E "(Number of files|Original size|Compressed size|Deduplicated size)"
+    echo ""
+}
+
+# Function to verify repository integrity
+verify_repository() {
+    log "Verifying repository integrity (this may take some time)..."
+
+    echo ""
+    print_status "$BLUE" "Running repository integrity check..."
+
+    if $BORG check --verify-data --progress "$BORG_REPO" 2>&1 | tee -a "$LOG_FILE"; then
+        print_status "$GREEN" "✓ Repository integrity check passed"
+        return 0
+    else
+        print_status "$RED" "✗ Repository integrity check failed"
+        return 1
+    fi
+}
+
+# Function to verify specific archive
+verify_archive() {
+    local archive=$1
+    log "Verifying archive: $archive"
+
+    if $BORG check --verify-data --progress "$BORG_REPO::$archive" 2>&1 | tee -a "$LOG_FILE"; then
+        print_status "$GREEN" "✓ Archive integrity check passed: $archive"
+        return 0
+    else
+        print_status "$RED" "✗ Archive integrity check failed: $archive"
+        return 1
+    fi
+}
+
+# Function to check SSH connectivity
+check_ssh_connectivity() {
+    log "Checking SSH connectivity to remote server..."
+
+    if ssh -i {{ borg_ssh_key }} -p {{ borg_ssh_port }} -o ConnectTimeout=10 {{ borg_ssh_user }}@{{ borg_ssh_host }} "echo 'SSH connection successful'" >/dev/null 2>&1; then
+        print_status "$GREEN" "✓ SSH connection to remote server successful"
+        return 0
+    else
+        print_status "$RED" "✗ SSH connection to remote server failed"
+        return 1
+    fi
+}
+
+# Function to display summary
+display_summary() {
+    local exit_code=$1
+
+    echo ""
+    echo "========================================"
+    if [ $exit_code -eq 0 ]; then
+        print_status "$GREEN" "VERIFICATION SUMMARY: ALL CHECKS PASSED"
+    else
+        print_status "$RED" "VERIFICATION SUMMARY: SOME CHECKS FAILED"
+    fi
+    echo "========================================"
+    echo ""
+}
+
+# Main execution
+main() {
+    echo ""
+    log "=========================================="
+    log "Starting backup verification for {{ inventory_hostname }}"
+    log "=========================================="
+    echo ""
+
+    # Track overall status
+    overall_status=0
+
+    # Run checks
+    check_ssh_connectivity || overall_status=1
+    echo ""
+
+    check_repository || overall_status=1
+    echo ""
+
+    list_recent_archives
+
+    check_archive_age || overall_status=1
+    echo ""
+
+    get_repository_stats
+
+    # Ask user if they want to run full integrity check
+    if [ "$1" == "--full" ] || [ "$1" == "-f" ]; then
+        verify_repository || overall_status=1
+    elif [ "$1" == "--archive" ] && [ -n "$2" ]; then
+        verify_archive "$2" || overall_status=1
+    else
+        echo ""
+        print_status "$YELLOW" "Note: Use --full flag to run complete repository integrity check"
+        print_status "$YELLOW" "      Use --archive <archive_name> to verify specific archive"
+        print_status "$YELLOW" "      (Integrity checks can take considerable time)"
+    fi
+
+    echo ""
+    display_summary $overall_status
+
+    log "Backup verification completed with exit code: $overall_status"
+
+    exit $overall_status
+}
+
+# Show usage
+if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  (no options)           Run basic verification checks"
+    echo "  --full, -f             Run full repository integrity check (slow)"
+    echo "  --archive <name>       Verify specific archive"
+    echo "  --help, -h             Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                                    # Quick verification"
+    echo "  $0 --full                             # Full integrity check"
+    echo "  $0 --archive {{ inventory_hostname }}-2024-01-01 # Verify specific archive"
+    exit 0
+fi
+
+# Run main function
+main "$@"

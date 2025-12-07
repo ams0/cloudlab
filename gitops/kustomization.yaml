@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
 - namespace.yaml
+- local-path-provisioner/local-path-provisioner.yaml
 
 # Add more resources here as you create them
 # - deployment.yaml

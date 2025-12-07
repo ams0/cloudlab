@@ -1,9 +1,9 @@
 [Unit]
-Description=Run Borg Backup Daily
+Description=Run Borg Backup Hourly
 Requires=borg-backup.service
 
 [Timer]
-OnCalendar=*-*-* {{ borg_backup_hour }}:{{ borg_backup_minute }}:00
+OnCalendar=hourly
 Persistent=true
 
 [Install]
