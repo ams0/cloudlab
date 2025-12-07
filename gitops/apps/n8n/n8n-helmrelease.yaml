@@ -1,5 +1,5 @@
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: n8n
@@ -10,11 +10,11 @@ spec:
   interval: 10m
   timeout: 5m
   targetNamespace: n8n
-  chart:
-    spec:
-      chart: oci://8gears.container-registry.com/library/n8n
-      version: ">=0.25.0"
-      interval: 1m
+  chartRef:
+    kind: OCIRepository
+    name: n8n-ocirepo
+    namespace: flux-system
+
   install:
     createNamespace: true
     remediation:
