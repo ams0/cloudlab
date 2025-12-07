@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
 - namespace.yaml
+- flux-receiver
 - gateway-api/experimental-install-v1.4.0.yaml
 - istio
 - cnpg
