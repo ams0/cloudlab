@@ -7,7 +7,7 @@ resources:
 - istio
 - cnpg
 - databases
-- apps/n8n
+- apps
 - gateways/configmap.yaml
 - gateways/gateway.yaml
 - local-path-provisioner/local-path-provisioner.yaml
