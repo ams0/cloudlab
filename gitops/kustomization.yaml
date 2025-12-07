@@ -4,7 +4,7 @@ kind: Kustomization
 resources:
 - namespace.yaml
 - gateway-api/experimental-install-v1.4.0.yaml
-- istio/kustomization.yaml
+- istio
 - local-path-provisioner/local-path-provisioner.yaml
 
 # Add more resources here as you create them
