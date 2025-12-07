@@ -36,3 +36,7 @@ spec:
       instances: 1
     backups:
       enabled: false
+    bootstrap:
+      initdb:
+        database: n8n
+        owner: n8n
