@@ -4,6 +4,8 @@ kind: HelmRelease
 metadata:
   name: n8n
   namespace: flux-system
+  labels:
+    app: n8n
 spec:
   interval: 10m
   timeout: 5m
