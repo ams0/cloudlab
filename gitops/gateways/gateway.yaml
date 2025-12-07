@@ -3,6 +3,8 @@ kind: Gateway
 metadata:
   name: gateway
   namespace: istio-system
+  labels:
+    app: gateway
 spec:
   listeners:
     - name: http
