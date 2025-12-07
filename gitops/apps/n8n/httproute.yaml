@@ -9,7 +9,7 @@ spec:
     - name: main-gateway
       namespace: default
   hostnames:
-    - "n8n.local"  # Change this to your actual domain
+    - "n8n.vps.kubespaces.cloud"  # Change this to your actual domain
   rules:
     - matches:
         - path:
