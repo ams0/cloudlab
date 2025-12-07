@@ -4,6 +4,9 @@ kind: HelmRelease
 metadata:
   name: n8n-database
   namespace: flux-system
+  labels:
+    app: n8n
+    purpose: n8n-database
 spec:
   interval: 10m
   timeout: 5m
