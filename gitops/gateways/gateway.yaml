@@ -11,14 +11,14 @@ spec:
       protocol: HTTP
       port: 80
       allowedRoutes:
-      namespaces:
-        from: All
+        namespaces:
+          from: All
     - name: https
       protocol: HTTPS
       port: 443
       allowedRoutes:
-      namespaces:
-        from: All
+        namespaces:
+          from: All
   infrastructure:
     parametersRef:
       group: ""
