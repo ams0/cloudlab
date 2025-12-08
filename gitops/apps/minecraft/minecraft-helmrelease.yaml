@@ -28,6 +28,10 @@ spec:
       retries: 3
   releaseName: minecraft
   values:
+    persistence:
+      dataDir:
+        enabled: true
+        existingClaim: "minecraft-pvc"
     minecraftServer:
       eula: "true"
       motd: "Welcome to my FluxCD managed Minecraft server!"
@@ -38,10 +42,6 @@ spec:
       pvp: true
       whiteList: false
       serviceType: "ClusterIP"
-    persistence:
-      enabled: true
-      mountPath: /data
-      existingClaim: "minecraft-pvc"
     service:
       type: ClusterIP
     rcon:
