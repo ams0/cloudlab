@@ -30,3 +30,5 @@ spec:
   releaseName: istiod
   values:
     profile: ambient
+    meshConfig:
+      accessLogFile: /dev/stdout
