@@ -1,0 +1,45 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: minecraft
+  namespace: flux-system
+  labels:
+    app: minecraft
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: minecraft
+  chartRef:
+    kind: HelmRepository
+    name: minecraft
+    namespace: flux-system
+
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    minecraftServer:
+      eula: "true"
+      motd: "Welcome to my FluxCD managed Minecraft server!"
+      difficulty: "normal"
+      gamemode: "survival"
+      maxPlayers: 10
+      levelName: "world"
+      pvp: true
+      whiteList: false
+      serviceType: "ClusterIP"
+    persistence:
+      enabled: true
+      mountPath: /data
+      existingClaim: "minecraft-pvc"
+    service:
+      type: ClusterIP
+    rcon:
+      enabled: true
+      password: "changeme"
+      port: 25575
