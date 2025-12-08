@@ -8,20 +8,25 @@ metadata:
     app: minecraft
 spec:
   interval: 10m
-  timeout: 5m
+  timeout: 10m
+  chart:
+    spec:
+      chart: minecraft-server
+      version: ">=5.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: minecraft
+        namespace: flux-system
+      interval: 1h
   targetNamespace: minecraft
-  chartRef:
-    kind: HelmRepository
-    name: minecraft
-    namespace: flux-system
-
   install:
-    createNamespace: true
+    createNamespace: false
     remediation:
       retries: 3
   upgrade:
     remediation:
       retries: 3
+  releaseName: minecraft
   values:
     minecraftServer:
       eula: "true"
