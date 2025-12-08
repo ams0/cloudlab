@@ -11,7 +11,7 @@ spec:
   timeout: 10m
   chart:
     spec:
-      chart: minecraft-server
+      chart: minecraft
       version: ">=5.0.0"
       sourceRef:
         kind: HelmRepository
