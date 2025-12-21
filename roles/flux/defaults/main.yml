@@ -9,7 +9,7 @@ flux_arch: "arm64"
 flux_namespace: "flux-system"
 
 # Git repository configuration
-flux_git_url: "https://github.com/ams0/ansible-singlehost"
+flux_git_url: "https://github.com/ams0/cloudlab"
 flux_git_branch: "main"
 flux_git_path: "./gitops"
 flux_git_repository_name: "flux-system"

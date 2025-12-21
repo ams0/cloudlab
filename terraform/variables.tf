@@ -37,7 +37,7 @@ variable "availability_domain" {
 variable "project_name" {
   description = "Name used for tagging and resource names."
   type        = string
-  default     = "ansible-singlehost"
+  default     = "cloudlab"
 }
 
 variable "freeform_tags" {

@@ -1,4 +1,4 @@
-# Project Rationale: ansible-singlehost
+# Project Rationale: CloudLab
 
 ## Executive Summary
 
@@ -213,7 +213,7 @@ This project implements a **production-grade, single-node Kubernetes platform** 
 ### Directory Organization
 
 ```
-ansible-singlehost/
+cloudlab/
 ├── terraform/          # Infrastructure layer (cloud resources)
 ├── roles/              # Configuration layer (system setup)
 ├── group_vars/         # Environment-specific configuration
