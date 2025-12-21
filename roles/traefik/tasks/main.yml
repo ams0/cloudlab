@@ -69,11 +69,6 @@
     pull: always
   register: traefik_deployment
 
-- name: Ensure Traefik is running
-  community.docker.docker_compose_v2:
-    project_src: "{{ traefik_dir }}"
-    state: started
-
 - name: Wait for Traefik to be healthy
   ansible.builtin.wait_for:
     port: 443
