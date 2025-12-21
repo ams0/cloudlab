@@ -36,7 +36,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: forgejo-forgejo-database-cluster-app
-              key: name
+              key: dbname
         - name: FORGEJO__DATABASE__USER
           valueFrom:
             secretKeyRef:
