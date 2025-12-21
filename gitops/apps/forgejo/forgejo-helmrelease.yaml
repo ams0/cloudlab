@@ -26,16 +26,17 @@ spec:
     persistence:
       enabled: true
       claimName: forgejo-pvc
+      size: 30Gi
     gitea:
       config:
         service:
           DISABLE_REGISTRATION: "true"
         mailer:
           ENABLED: "true"
-          HOST: "smtp-relay.gmail.com"
+          SMTP_ADDR: "smtp-relay.gmail.com"
+          SMTP_PORT: 587
           FROM: "auth@kubespaces.io"
           USER: "alessandro@kubespaces.io"
-          PORT: 587
         server:
           DOMAIN: code.vps.kubespaces.cloud
           ROOT_URL: "https://code.vps.kubespaces.cloud/"
