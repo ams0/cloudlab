@@ -30,6 +30,12 @@ spec:
       config:
         service:
           DISABLE_REGISTRATION: "true"
+        mailer:
+          ENABLED: "true"
+          HOST: "smtp-relay.gmail.com"
+          FROM: "auth@kubespaces.io"
+          USER: "alessandro@kubespaces.io"
+          PORT: 587
         server:
           DOMAIN: code.vps.kubespaces.cloud
           ROOT_URL: "https://code.vps.kubespaces.cloud/"
@@ -37,6 +43,11 @@ spec:
           DB_TYPE: postgres
           HOST: forgejo-forgejo-database-cluster-rw
       additionalConfigFromEnvs:
+        - name: FORGEJO__MAILER__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-smtp
+              key: passwd
         - name: FORGEJO__DATABASE__NAME
           valueFrom:
             secretKeyRef:
