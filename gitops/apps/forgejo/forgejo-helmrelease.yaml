@@ -1,0 +1,49 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: forgejo
+  namespace: flux-system
+  labels:
+    app: forgejo
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: forgejo
+  chartRef:
+    kind: OCIRepository
+    name: forgejo-ocirepo
+    namespace: flux-system
+
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    persistence:
+      enabled: true
+      claimName: forgejo-pvc
+    gitea:
+      config:
+        database:
+          DB_TYPE: postgres
+          HOST: forgejo-forgejo-database-cluster-rw
+      additionalConfigFromEnvs:
+        - name: FORGEJO__DATABASE__NAME
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-forgejo-database-cluster-app
+              key: name
+        - name: FORGEJO__DATABASE__USER
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-forgejo-database-cluster-app
+              key: user
+        - name: FORGEJO__DATABASE__PASSWD
+          valueFrom:
+            secretKeyRef:
+              name: forgejo-forgejo-database-cluster-app
+              key: password
