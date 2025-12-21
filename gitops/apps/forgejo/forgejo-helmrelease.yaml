@@ -28,6 +28,8 @@ spec:
       claimName: forgejo-pvc
     gitea:
       config:
+        service:
+          DISABLE_REGISTRATION: "true"
         server:
           DOMAIN: code.vps.kubespaces.cloud
           ROOT_URL: "https://code.vps.kubespaces.cloud/"
