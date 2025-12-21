@@ -9,7 +9,7 @@ metadata:
 spec:
   interval: 10m
   timeout: 5m
-  targetNamespace: n8n
+  targetNamespace: forgejo
   chart:
     spec:
       chart: cluster
