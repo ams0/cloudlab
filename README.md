@@ -1,4 +1,4 @@
-# Ansible Oracle Host Management
+# CloudLab Host Management
 
 This Ansible project manages a single Oracle host with comprehensive configuration including packages, cron jobs, and Kubernetes.
 
