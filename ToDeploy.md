@@ -5,7 +5,7 @@
 - [ ] Dashy
 - [ ] Grafana/Prometheus
 - [X] Forgejo 
-- [ ] Mailer and ~~runners~~ for ForgeJo
+- [X] Mailer and runners for ForgeJo
 - [ ] RustFS (https://s3.vps.kubespaces.cloud/)
 - [ ] Element Community (https://github.com/element-hq/ess-helm)
 - [ ] Pretalx
