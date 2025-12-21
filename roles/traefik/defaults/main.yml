@@ -1,0 +1,30 @@
+---
+# Traefik deployment directory on the remote host
+traefik_dir: /home/ubuntu/traefik
+
+# Traefik version
+traefik_version: v2.11
+
+# Email for Let's Encrypt
+traefik_acme_email: admin@kubespaces.cloud
+
+# Dashboard domain
+traefik_dashboard_domain: traefik.vps.kubespaces.cloud
+
+# Backend domains for routing
+traefik_backend_domains:
+  - n8n.vps.kubespaces.cloud
+  - minecraft.vps.kubespaces.cloud
+  - echo.vps.kubespaces.cloud
+  - webhook.vps.kubespaces.cloud
+  - helix.vps.kubespaces.cloud
+  - rancher.vps.kubespaces.cloud
+
+# Dashboard basic auth (generate with: htpasswd -nbB admin password)
+traefik_dashboard_auth: "admin:$$2y$$05$$ZV29JTIroQmmo/bRLamjB.zzZBO/sprB2qMCstsMTm3uQ.M9Tfipm"
+
+# Fail2ban configuration
+traefik_fail2ban_enabled: true
+traefik_fail2ban_bantime: 3h
+traefik_fail2ban_findtime: 10m
+traefik_fail2ban_maxretry: 4
