@@ -28,6 +28,9 @@ spec:
       claimName: forgejo-pvc
     gitea:
       config:
+        server:
+          DOMAIN: code.vps.kubespaces.cloud
+          ROOT_URL: "https://code.vps.kubespaces.cloud/"
         database:
           DB_TYPE: postgres
           HOST: forgejo-forgejo-database-cluster-rw
