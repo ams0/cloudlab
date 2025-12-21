@@ -1,0 +1,86 @@
+---
+- name: Create Traefik directory
+  ansible.builtin.file:
+    path: "{{ traefik_dir }}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Copy Traefik static configuration
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/ingress/traefik/traefik.yml"
+    dest: "{{ traefik_dir }}/traefik.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  notify: Reload Traefik
+
+- name: Copy Traefik dynamic configuration
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/ingress/traefik/dynamic.yml"
+    dest: "{{ traefik_dir }}/dynamic.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  notify: Reload Traefik
+
+- name: Copy Docker Compose file
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/ingress/traefik/docker-compose.yml"
+    dest: "{{ traefik_dir }}/docker-compose.yml"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+  notify: Reload Traefik
+
+- name: Check if acme.json exists
+  ansible.builtin.stat:
+    path: "{{ traefik_dir }}/acme.json"
+  register: acme_file
+
+- name: Create acme.json if it doesn't exist
+  ansible.builtin.file:
+    path: "{{ traefik_dir }}/acme.json"
+    state: touch
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  when: not acme_file.stat.exists
+
+- name: Ensure acme.json has correct permissions
+  ansible.builtin.file:
+    path: "{{ traefik_dir }}/acme.json"
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+  when: acme_file.stat.exists
+
+- name: Create Traefik network
+  community.docker.docker_network:
+    name: traefik
+    driver: bridge
+    state: present
+
+- name: Deploy Traefik with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_dir }}"
+    state: present
+    pull: always
+  register: traefik_deployment
+
+- name: Ensure Traefik is running
+  community.docker.docker_compose_v2:
+    project_src: "{{ traefik_dir }}"
+    state: started
+
+- name: Wait for Traefik to be healthy
+  ansible.builtin.wait_for:
+    port: 443
+    host: 0.0.0.0
+    timeout: 60
+    delay: 5
+
+- name: Display Traefik status
+  ansible.builtin.debug:
+    msg: "Traefik is running. Dashboard: https://{{ traefik_dashboard_domain }}"
