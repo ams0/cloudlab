@@ -35,7 +35,6 @@ spec:
           ENABLED: "true"
           SMTP_ADDR: "smtp-relay.gmail.com"
           SMTP_PORT: 587
-          FROM: "auth@kubespaces.io"
           USER: "alessandro@kubespaces.io"
         server:
           DOMAIN: code.vps.kubespaces.cloud
