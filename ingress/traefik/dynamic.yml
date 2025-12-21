@@ -16,7 +16,7 @@ http:
   routers:
     # HTTPS routers for all domains
     backend:
-      rule: "Host(`n8n.vps.kubespaces.cloud`) || Host(`code.vps.kubespaces.cloud`) || Host(`minecraft.vps.kubespaces.cloud`) || Host(`echo.vps.kubespaces.cloud`) || Host(`webhook.vps.kubespaces.cloud`) || Host(`helix.vps.kubespaces.cloud`) || Host(`rancher.vps.kubespaces.cloud`)"
+      rule: "Host(`n8n.vps.kubespaces.cloud`) || Host(`s3.vps.kubespaces.cloud`) || Host(`code.vps.kubespaces.cloud`) || Host(`minecraft.vps.kubespaces.cloud`) || Host(`echo.vps.kubespaces.cloud`) || Host(`webhook.vps.kubespaces.cloud`) || Host(`helix.vps.kubespaces.cloud`) || Host(`rancher.vps.kubespaces.cloud`)"
       entryPoints:
         - websecure
       service: backend-service
