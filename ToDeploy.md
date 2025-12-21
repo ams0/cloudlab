@@ -1,7 +1,9 @@
 ## To deploy
 
-- [ ] Minecraft server
+- [X] Minecraft server
+- [ ] Move Minecraft to use [PaperMC](https://papermc.io/)
 - [ ] Dashy
 - [ ] Grafana/Prometheus
-- [ ] Forgejo and runners (helm)
-- [ ] RustFS
+- [X] Forgejo 
+- [ ] Mailer and runners for ForgeJo
+- [ ] RustFS (https://s3.vps.kubespaces.cloud/)

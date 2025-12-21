@@ -2,6 +2,8 @@
 
 This Ansible project manages a single Oracle host with comprehensive configuration including packages, cron jobs, and Kubernetes.
 
+This repos is available on [GitHub](https://github.com/ams0/cloudlab.git) and on my own [Forgejo instance](https://code.vps.kubespaces.cloud/ams0/cloudlab.git)
+
 ## Structure
 
 ```
