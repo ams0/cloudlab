@@ -1,0 +1,72 @@
+name: Deploy with Ansible
+
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Ansible tags to run (comma-separated, leave empty for all)'
+        required: false
+        default: ''
+      limit:
+        description: 'Limit to specific hosts (leave empty for all)'
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Ansible and dependencies
+        run: |
+          pip install ansible
+          ansible-galaxy install -r requirements.yml
+
+      - name: Create SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.ANSIBLE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create inventory file
+        run: |
+          cat > inventory.ini << EOF
+          [oracle_hosts]
+          oracle-server ansible_host=${{ secrets.ANSIBLE_HOST }} ansible_user=${{ secrets.ANSIBLE_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa
+          EOF
+
+      - name: Create Ansible vault password file
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.vault_pass
+          chmod 600 ~/.vault_pass
+
+      - name: Run Ansible playbook
+        run: |
+          ANSIBLE_OPTS="--vault-password-file ~/.vault_pass"
+          
+          if [ -n "${{ github.event.inputs.tags }}" ]; then
+            ANSIBLE_OPTS="$ANSIBLE_OPTS --tags ${{ github.event.inputs.tags }}"
+          fi
+          
+          if [ -n "${{ github.event.inputs.limit }}" ]; then
+            ANSIBLE_OPTS="$ANSIBLE_OPTS --limit ${{ github.event.inputs.limit }}"
+          fi
+          
+          ansible-playbook site.yml $ANSIBLE_OPTS
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
+          rm -f ~/.vault_pass
+          rm -f inventory.ini
