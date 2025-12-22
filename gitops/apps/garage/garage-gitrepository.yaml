@@ -8,4 +8,4 @@ spec:
   interval: 5m0s
   url:  https://git.deuxfleurs.fr/Deuxfleurs/garage.git
   ref:
-    branch: master
+    branch: main-v2
