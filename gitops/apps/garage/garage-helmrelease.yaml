@@ -1,0 +1,38 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: garage
+  namespace: flux-system
+  labels:
+    app: garage
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: garage
+  chart:
+    spec:
+      chart: ./scripts/helm
+      sourceRef:
+        kind: GitRepository
+        name: garage-gitrepo
+        namespace: flux-system
+      interval: 5m0s
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    persistence:
+      meta:
+        storageClass: "local-path"
+        size: 100Mi
+      data:
+        storageClass: "local-path"
+    garage:
+      s3:
+        api:
+          rootDomain: "s3.vps.kubespaces.cloud"

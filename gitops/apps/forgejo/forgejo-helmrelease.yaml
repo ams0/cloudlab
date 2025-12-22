@@ -23,7 +23,6 @@ spec:
     remediation:
       retries: 3
   values:
-    replicaCount: 2
     persistence:
       enabled: true
       claimName: forgejo-pvc
