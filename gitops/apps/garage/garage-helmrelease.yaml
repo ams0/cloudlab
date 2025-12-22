@@ -35,6 +35,7 @@ spec:
         size: 100Mi
       data:
         storageClass: "local-path"
+        size: 5Gi
     garage:
       s3:
         api:
