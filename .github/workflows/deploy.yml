@@ -52,13 +52,16 @@ jobs:
       - name: Test vault decryption
         run: |
           echo "Testing vault password..."
-          ansible-vault view group_vars/oracle_hosts/vault.yml --vault-password-file .vault_password | head -5 || {
+          echo "Password file size: $(wc -c < .vault_password) bytes"
+          if ansible-vault view group_vars/oracle_hosts/vault.yml --vault-password-file .vault_password > /tmp/vault_test 2>&1; then
+            echo "✓ Vault decryption successful"
+            head -5 /tmp/vault_test
+          else
             echo "ERROR: Failed to decrypt vault file"
-            echo "Password file size: $(wc -c < .vault_password) bytes"
-            echo "Password file (first 5 chars): $(head -c 5 .vault_password)..."
+            cat /tmp/vault_test
+            echo "Password file (first 10 chars): $(head -c 10 .vault_password | od -An -tx1)"
             exit 1
-          }
-          echo "✓ Vault decryption successful"
+          fi
 
       - name: Run Ansible playbook
         run: |
