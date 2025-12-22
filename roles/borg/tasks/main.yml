@@ -135,13 +135,30 @@
     mode: '0644'
   changed_when: false
 
+- name: Get NAS host key via ssh-keyscan
+  command: "ssh-keyscan -T 5 -H {{ borg_ssh_host }}"
+  register: borg_ssh_scan
+  changed_when: false
+  failed_when: borg_ssh_scan.rc != 0 or borg_ssh_scan.stdout | length == 0
+  when: borg_ssh_host != "" and (borg_ssh_host_key | default("") | length) == 0
+
+- name: Use provided NAS host key
+  set_fact:
+    borg_known_host_key: "{{ borg_ssh_host_key }}"
+  when: borg_ssh_host != "" and (borg_ssh_host_key | default("") | length) > 0
+
+- name: Set NAS host key from scan
+  set_fact:
+    borg_known_host_key: "{{ borg_ssh_scan.stdout }}"
+  when: borg_ssh_host != "" and (borg_ssh_host_key | default("") | length) == 0 and borg_ssh_scan.stdout | length > 0
+
 - name: Add NAS host key to root's known_hosts
   known_hosts:
     name: "{{ borg_ssh_host }}"
-    key: "{{ lookup('pipe', 'ssh-keyscan -H ' + borg_ssh_host) }}"
+    key: "{{ borg_known_host_key }}"
     state: present
     path: /root/.ssh/known_hosts
-  when: borg_ssh_host != ""
+  when: borg_ssh_host != "" and borg_known_host_key is defined and borg_known_host_key | length > 0
 
 - name: Create systemd service for borg backup
   template:

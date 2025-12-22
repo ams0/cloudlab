@@ -22,6 +22,7 @@ borg_ssh_key: "/home/{{ borg_user }}/.ssh/borg_backup"
 borg_ssh_user: ""  # Must be set
 borg_ssh_host: ""  # Must be set
 borg_ssh_port: 22
+borg_ssh_host_key: ""  # Optional pre-shared host key to avoid ssh-keyscan lookups
 borg_remote_path: ""  # Full path to borg on remote server (e.g., /usr/local/bin/borg)
 
 # Backup configuration
