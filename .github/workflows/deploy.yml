@@ -46,7 +46,8 @@ jobs:
 
       - name: Create Ansible vault password file
         run: |
-          echo -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_password
+          # Trim whitespace and create password file
+          echo -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" | tr -d '[:space:]' > .vault_password
           chmod 600 .vault_password
 
       - name: Test vault decryption
