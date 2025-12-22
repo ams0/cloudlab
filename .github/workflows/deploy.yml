@@ -46,12 +46,12 @@ jobs:
 
       - name: Create Ansible vault password file
         run: |
-          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.vault_pass
-          chmod 600 ~/.vault_pass
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_password
+          chmod 600 .vault_password
 
       - name: Run Ansible playbook
         run: |
-          ANSIBLE_OPTS="--vault-password-file ~/.vault_pass"
+          ANSIBLE_OPTS=""
           
           if [ -n "${{ github.event.inputs.tags }}" ]; then
             ANSIBLE_OPTS="$ANSIBLE_OPTS --tags ${{ github.event.inputs.tags }}"
@@ -67,5 +67,5 @@ jobs:
         if: always()
         run: |
           rm -f ~/.ssh/id_rsa
-          rm -f ~/.vault_pass
+          rm -f .vault_password
           rm -f inventory.ini
