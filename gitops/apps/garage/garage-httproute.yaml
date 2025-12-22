@@ -19,3 +19,10 @@ spec:
       backendRefs:
         - name: garage-garage
           port: 3900
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /web
+      backendRefs:
+        - name: garage-garage
+          port: 3902
