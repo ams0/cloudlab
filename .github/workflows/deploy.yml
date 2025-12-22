@@ -49,6 +49,17 @@ jobs:
           echo -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > .vault_password
           chmod 600 .vault_password
 
+      - name: Test vault decryption
+        run: |
+          echo "Testing vault password..."
+          ansible-vault view group_vars/oracle_hosts/vault.yml --vault-password-file .vault_password | head -5 || {
+            echo "ERROR: Failed to decrypt vault file"
+            echo "Password file size: $(wc -c < .vault_password) bytes"
+            echo "Password file (first 5 chars): $(head -c 5 .vault_password)..."
+            exit 1
+          }
+          echo "✓ Vault decryption successful"
+
       - name: Run Ansible playbook
         run: |
           ANSIBLE_OPTS=""
