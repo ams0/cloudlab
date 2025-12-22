@@ -5,3 +5,4 @@ resources:
   - namespace.yaml
   - garage-gitrepository.yaml
   - garage-helmrelease.yaml 
+  - garage-httproute.yaml
