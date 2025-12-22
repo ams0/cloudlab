@@ -12,7 +12,7 @@ spec:
   targetNamespace: garage
   chart:
     spec:
-      chart: ./scripts/helm
+      chart: ./script/helm
       sourceRef:
         kind: GitRepository
         name: garage-gitrepo
