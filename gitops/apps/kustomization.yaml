@@ -5,4 +5,4 @@ resources:
   - n8n
   - minecraft
   - garage
-  - forgejo
+  #- forgejo
