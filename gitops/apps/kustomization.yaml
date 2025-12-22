@@ -4,5 +4,5 @@ kind: Kustomization
 resources:
   - n8n
   - minecraft
-  - forgejo
   - garage
+  - forgejo
