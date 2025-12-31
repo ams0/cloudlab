@@ -1,4 +1,4 @@
-  name: Pull Request
+  name: Deploy with Spacelift
   on:
     workflow_dispatch:
     pull_request:
