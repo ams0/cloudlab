@@ -9,3 +9,4 @@
 - [ ] RustFS (https://s3.vps.kubespaces.cloud/)
 - [ ] Element Community (https://github.com/element-hq/ess-helm)
 - [ ] Pretalx
+- [ ] Harbor

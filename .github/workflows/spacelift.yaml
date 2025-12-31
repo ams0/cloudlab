@@ -1,0 +1,22 @@
+  name: Pull Request
+  on:
+    workflow_dispatch:
+    pull_request:
+      branches: [ 'main' ]
+      types: [opened, synchronize, reopened, closed, labeled, unlabeled]
+
+  jobs:
+    infrastructure:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: cloudposse/github-action-spacelift-stack-deploy@main
+          id: spacelift
+          with:
+            stack: cloudlab
+            github_token: ${{ secrets.PUBLIC_REPO_ACCESS_TOKEN }}
+            organization: acme
+            api_key_id: ${{ secrets.SPACELIFT_API_KEY_ID }}
+            api_key_secret: ${{ secrets.SPACELIFT_API_KEY_SECRET }}
+
+      outputs:
+         outputs: ${{ steps.spacelift.outputs.outputs }}
