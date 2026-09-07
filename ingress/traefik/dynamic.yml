@@ -20,7 +20,7 @@ http:
     dashboard-auth:
       basicAuth:
         users:
-          - "admin:$apr1$9sVVXvJp$NTbR5JPnmM6XyPe.Y89qW/"
+          - "admin:$2y$05$0xFqkTDzppb9is2jdcbBqu5LxnY6/vjQRBXLnFR1v7bkGCGUQq5aO"
 
   routers:
     # Each domain gets its own router so Traefik can request
