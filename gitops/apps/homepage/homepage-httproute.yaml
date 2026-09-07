@@ -17,5 +17,5 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: homepage
+        - name: homepage-homepage   # <release>-<chart>; Flux names the release <targetNamespace>-<HelmRelease>
           port: 3000
