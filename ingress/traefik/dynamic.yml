@@ -14,10 +14,42 @@ http:
             maxretry: "4"
             statuscode: 400,401,403-499
 
+    # Guards the Traefik dashboard, which exposes every router, service and
+    # middleware on this host. Nothing else here is authenticated, so the
+    # dashboard must not be the one open admin surface.
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$apr1$9sVVXvJp$NTbR5JPnmM6XyPe.Y89qW/"
+
   routers:
     # Each domain gets its own router so Traefik can request
     # individual certs dynamically when new domains are added.
     # To add a new domain: copy any router block, change the name and Host.
+
+    home:
+      rule: "Host(`home.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
+    status:
+      rule: "Host(`status.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
+    # Traefik's own dashboard — served by Traefik itself (api@internal),
+    # not proxied into the cluster like every other router here.
+    traefik:
+      rule: "Host(`traefik.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: api@internal
+      middlewares: [dashboard-auth]
+      tls:
+        certResolver: letsencrypt
 
     atlantis:
       rule: "Host(`atlantis.vps.kubespaces.cloud`)"

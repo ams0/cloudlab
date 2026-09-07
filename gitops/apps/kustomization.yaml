@@ -11,6 +11,8 @@ kind: Kustomization
 
 resources:
   - keycloak
+  - homepage
+  - uptime-kuma
 
 #  - n8n            # rebuild: off
 #  - stakater       # rebuild: off
@@ -27,7 +29,6 @@ resources:
 #  - omni           # rebuild: off
 #  - tailscale      # rebuild: off
 #  - alarik         # rebuild: off
-#  - uptime-kuma    # rebuild: off
 #  - outline        # rebuild: off
 #  - rustfs         # rebuild: off
 #  - backstage      # rebuild: off
