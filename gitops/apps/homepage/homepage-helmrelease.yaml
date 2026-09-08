@@ -92,6 +92,10 @@ spec:
                 href: https://n8n.vps.kubespaces.cloud
                 description: Workflow automation, queue mode with Postgres and Valkey
                 icon: n8n.png
+            - Renovate:
+                href: https://renovate.vps.kubespaces.cloud
+                description: In-cluster dependency updates, CRD-scheduled
+                icon: renovate.png
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud

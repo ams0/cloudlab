@@ -1,0 +1,24 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: renovate-operator
+  namespace: renovate-operator
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: istio-system
+      sectionName: http
+  hostnames:
+    - "renovate.vps.kubespaces.cloud"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        # Chart's fullname helper is an unconditional <release>-<chart>, which under
+        # Flux's <targetNamespace>-<HelmRelease> naming would triple the name.
+        # fullnameOverride in the HelmRelease pins it to this instead.
+        - name: renovate-operator
+          port: 8081

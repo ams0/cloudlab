@@ -1,0 +1,13 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: renovate-operator-ocirepo
+  namespace: flux-system
+spec:
+  interval: 10m
+  layerSelector:
+    mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+    operation: copy
+  url: oci://ghcr.io/mogenius/helm-charts/renovate-operator
+  ref:
+    semver: ">= 6.3.0"

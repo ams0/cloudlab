@@ -41,6 +41,17 @@ http:
       tls:
         certResolver: letsencrypt
 
+    # Renovate Operator UI. No auth provider is configured in the chart, and the
+    # operator treats every request as admin in that case, so it does not go out
+    # unauthenticated. Drop the middleware once OIDC via Keycloak is wired up.
+    renovate:
+      rule: "Host(`renovate.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      middlewares: [dashboard-auth]
+      tls:
+        certResolver: letsencrypt
+
     # Traefik's own dashboard — served by Traefik itself (api@internal),
     # not proxied into the cluster like every other router here.
     traefik:

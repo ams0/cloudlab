@@ -1,0 +1,57 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: renovate-operator
+  namespace: flux-system
+  labels:
+    app: renovate-operator
+spec:
+  interval: 10m
+  timeout: 10m
+  targetNamespace: renovate-operator
+  chartRef:
+    kind: OCIRepository
+    name: renovate-operator-ocirepo
+    namespace: flux-system
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # The fullname helper is an unconditional <release>-<chart>. Flux names the
+    # release <targetNamespace>-<HelmRelease>, which would yield
+    # renovate-operator-renovate-operator-renovate-operator. Pin it.
+    fullnameOverride: renovate-operator
+
+    crd:
+      install: true
+      # "template" keeps the CRDs as ordinary chart resources that Helm and Flux
+      # both track, instead of a hook Job that pulls a kubectl image.
+      mode: template
+
+    # Routing is defined separately in renovate-operator-httproute.yaml, per the
+    # convention used by every other app here.
+    ingress:
+      enabled: false
+    route:
+      enabled: false
+
+    # Sessions live in-process; a single replica avoids needing Valkey for them.
+    replicaCount: 1
+    valkey:
+      enabled: false
+
+    resources:
+      requests:
+        cpu: 20m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    logging:
+      level: info
