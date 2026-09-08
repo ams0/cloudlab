@@ -70,6 +70,9 @@ spec:
           Platform:
             style: row
             columns: 3
+          Automation:
+            style: row
+            columns: 3
           Observability:
             style: row
             columns: 3
@@ -84,6 +87,11 @@ spec:
                 href: https://traefik.vps.kubespaces.cloud
                 description: Host-level reverse proxy and TLS termination
                 icon: traefik.png
+        - Automation:
+            - n8n:
+                href: https://n8n.vps.kubespaces.cloud
+                description: Workflow automation, queue mode with Postgres and Valkey
+                icon: n8n.png
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud

@@ -13,8 +13,8 @@ resources:
   - keycloak
   - homepage
   - uptime-kuma
+  - n8n
 
-#  - n8n            # rebuild: off
 #  - stakater       # rebuild: off
 #  - garage         # rebuild: off
 #  - forgejo        # rebuild: off
