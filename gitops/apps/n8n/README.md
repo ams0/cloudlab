@@ -6,10 +6,7 @@ Powerful workflow automation platform and self-hosted alternative to Zapier/Make
 
 - `namespace.yaml` - Namespace definition
 - `n8n-ocirepo.yaml` - OCI chart repository source (n8n)
-- `redis-ocirepo.yaml` - OCI chart repository source (Redis)
 - `n8n-database-helmrelease.yaml` - CNPG PostgreSQL 18 cluster
-- `redis-pvc.yaml` - 5Gi PVC (local-path) for Redis persistence
-- `redis-helmrelease.yaml` - Standalone Redis HelmRelease
 - `n8n-pvc.yaml` - 10Gi PVC (local-path) for n8n data
 - `n8n-helmrelease.yaml` - Flux HelmRelease (app)
 - `n8n-httproute.yaml` - Gateway API HTTPRoute
@@ -20,7 +17,9 @@ n8n runs in **queue mode** with three components:
 
 1. **Main server** - Handles the UI, webhook endpoints, and the workflow editor. Accepts incoming workflow triggers and enqueues jobs.
 2. **Worker** (1 replica, 10 concurrent jobs) - Executes workflows picked from the Bull queue. Offloads execution from the main server, enabling horizontal scaling.
-3. **Valkey/Redis** - In-chart Valkey (a Redis fork) powers the Bull message queue that distributes jobs between main and workers. A separate Redis HelmRelease also exists.
+3. **Valkey** - In-chart Valkey (a Redis fork) powers the Bull message queue that distributes jobs between main and workers.
+
+A standalone `redis-n8n` HelmRelease used to be deployed alongside this, with its own 5Gi PVC. Nothing ever connected to it — the queue points at `n8n-n8n-valkey` — so it was removed. Do not add it back without also repointing `config.queue.bull.redis.host`.
 
 ## HelmRelease Values
 
@@ -45,8 +44,6 @@ n8n stores workflow definitions, encrypted credentials, execution history, and u
 ## Storage
 
 **n8n-pvc: 10Gi local-path** - Stores binary data such as uploaded files, custom node packages, and encryption keys.
-
-**redis-pvc: 5Gi local-path** - Redis persistence for queue state. Ensures in-flight jobs are not lost if the Redis pod restarts.
 
 ## Routing
 

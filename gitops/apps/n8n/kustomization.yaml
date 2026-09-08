@@ -5,9 +5,6 @@ resources:
   - namespace.yaml
   - n8n-ocirepository.yaml
   - n8n-db-helmrelease.yaml
-  - redis-ocirepository.yaml
-  - redis-pvc.yaml
-  - redis-helmrelease.yaml
   - n8n-pvc.yaml
   - n8n-helmrelease.yaml
   - n8n-httproute.yaml
