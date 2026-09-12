@@ -17,13 +17,28 @@ ansible-playbook site.yml --tags packages         # Run specific role(s)
 ansible-playbook site.yml --tags k0s,flux         # Multiple tags
 ansible-playbook site.yml --check --diff          # Dry run
 ansible oracle_hosts -m ping                      # Test connectivity
+ansible-vault edit group_vars/oracle_hosts/vault.yml   # Edit secrets
 ```
 
-Available tags: `common`, `packages`, `fail2ban`/`security`, `cron`, `docker`, `traefik`/`ingress`, `tailscale`, `sshfs`/`backup`, `borg`/`backup`, `datadog`/`monitoring`, `k0s`/`kubernetes`, `flux`/`gitops`, `flux-webhook`, `claude-code`/`tools`
+`ansible.cfg` sets `vault_password_file = .vault_password`, so no `--ask-vault-pass` is needed locally.
+
+Available tags (order matches `site.yml`): `common`, `packages`, `fail2ban`/`security`, `cron`, `docker`, `traefik`/`ingress`, `tailscale`, `sshfs`/`backup`, `borg`/`backup`, `datadog`/`monitoring`, `alloy`/`monitoring`, `k0s`/`kubernetes`, `flux`/`gitops`, `flux-webhook`/`gitops`, `claude-code`/`tools`
 
 ### Terraform
 ```bash
 cd terraform && terraform init && terraform apply
+./deploy.sh                                       # terraform apply → wait for SSH → ansible-playbook site.yml
+```
+
+### Validation
+
+There is no unit test suite. Validate before applying:
+```bash
+terraform -chdir=terraform fmt -check && terraform -chdir=terraform validate
+ansible-playbook site.yml --check --diff
+kubectl apply --dry-run=server -f <manifest>      # requires CRDs present
+kubectl kustomize gitops/apps/{app}               # verify a kustomization renders
+helm lint charts/{chart}
 ```
 
 ### Kubernetes / Flux
@@ -44,7 +59,14 @@ git push → GitHub Actions (roles/** or ingress/** changes) → Ansible configu
 git push → Flux CD (gitops/** changes) → Reconciles Kubernetes resources every 10m
 ```
 
-GitHub Actions runs Ansible only when `roles/**` or `ingress/**` change. Flux watches `gitops/**` directly from the Git repo.
+Workflows in `.github/workflows/`:
+- `deploy.yml` — runs Ansible on `roles/**` or `ingress/**` changes, **plus a 6-hourly schedule** and manual dispatch (optional `tags`/`limit` inputs). Reaches the host over Tailscale.
+- `backstage-image.yml` — builds/pushes `ghcr.io/ams0/backstage` on `gitops/apps/backstage/src/**` changes.
+- `helm-chart.yml` — packages and pushes `charts/alarik` to `oci://ghcr.io/ams0` on `charts/alarik/**` changes.
+
+Flux watches `gitops/**` directly from the Git repo; `flux-webhook` (Ansible role + `gitops/flux-receiver/`) gives GitHub a receiver for push-triggered reconciliation instead of waiting for the interval.
+
+`origin` fetches from GitHub (canonical, and the source Flux reads) but pushes to **both** GitHub and the Forgejo mirror at `code.vps.kubespaces.cloud`. If the mirror diverges, realign it with a force-push — never rewrite GitHub.
 
 ### Infrastructure Stack
 ```
@@ -53,11 +75,15 @@ OCI ARM64 VM (Terraform)
        ├── Istio (ambient mode, service mesh + Gateway API)
        ├── Flux CD (GitOps controller)
        ├── CloudNativePG (PostgreSQL operator)
+       ├── Altinity ClickHouse operator
        ├── local-path-provisioner (storage)
+       ├── Observability: kube-prometheus-stack + Thanos + Grafana, Loki, Alloy (DaemonSet)
        └── Applications (Helm charts via Flux)
 ```
 
-Host-level services (Ansible-managed): Traefik (reverse proxy), Tailscale (VPN), Docker, Fail2ban, BorgBackup, Datadog agent.
+Host-level services (Ansible-managed): Traefik (reverse proxy), Tailscale (VPN), Docker, Fail2ban, BorgBackup, Datadog agent, Grafana Alloy (Docker container tailing the journal + `/var/log` files → Loki).
+
+Logging has two Alloy deployments: the **host** one (`roles/alloy/`, ships journald and host log files) and the **cluster** one (`gitops/alloy/`, DaemonSet tailing `/var/log/pods/*`). Both push to the same Loki. Traefik logs via `json-file` + Alloy — never the Loki Docker log driver, which creates a boot-order circular dependency that wedges the host.
 
 ---
 
@@ -65,7 +91,7 @@ Host-level services (Ansible-managed): Traefik (reverse proxy), Tailscale (VPN),
 
 ```
 terraform/           — OCI VM provisioning (VCN, subnet, security list, compute)
-roles/               — 14 Ansible roles orchestrated by site.yml
+roles/               — 15 Ansible roles orchestrated by site.yml
   common/            — Base system configuration
   packages/          — System packages
   fail2ban/          — Intrusion prevention
@@ -76,6 +102,7 @@ roles/               — 14 Ansible roles orchestrated by site.yml
   sshfs/             — Remote filesystem mounts
   borg/              — BorgBackup for host-level backups
   datadog/           — Monitoring agent
+  alloy/             — Grafana Alloy log shipper (Docker, host logs → Loki)
   k0s/               — Kubernetes distribution
   flux/              — Flux CD bootstrap
   flux-webhook/      — GitHub webhook receiver for Flux
@@ -89,8 +116,11 @@ gitops/              — All Kubernetes manifests, Flux-managed
   kustomization.yaml — Root kustomization (entry point for Flux)
   apps/              — Application deployments (each app is a subdirectory)
   observability/     — Prometheus (kube-prometheus-stack), Grafana, Thanos
+  loki/              — Loki (SimpleScalable mode) + shared `grafana` HelmRepository
+  alloy/             — Alloy DaemonSet (cluster log collection)
+  clickhouse/        — Altinity ClickHouse operator
   istio/             — Istio service mesh (ambient mode: base, cni, istiod, ztunnel)
-  cnpg/              �� CloudNativePG operator (cluster-wide)
+  cnpg/              — CloudNativePG operator (cluster-wide)
   databases/         — Shared database definitions
   gateways/          — Istio Gateway + config
   gateway-api/       — Gateway API CRDs
@@ -98,7 +128,12 @@ gitops/              — All Kubernetes manifests, Flux-managed
   argocd/            — ArgoCD (alternative GitOps)
   velero/            — Backup and disaster recovery
   flux-receiver/     — Webhook receiver config
+  system/            — Empty placeholder kustomization (resources: [])
+charts/              — Local Helm charts (alarik, forgejo-runner); alarik is published to GHCR by CI
+.github/workflows/   — Ansible deploy, Backstage image build, Helm chart push
 ```
+
+Anything under `gitops/` only reaches the cluster if it is reachable from `gitops/kustomization.yaml` (which pulls in `gitops/apps/kustomization.yaml` for apps).
 
 ---
 
@@ -330,6 +365,13 @@ Apps needing email use Google Workspace SMTP relay:
 - Port: 587 with STARTTLS
 - Credentials from per-app Kubernetes secrets (e.g. `forgejo-smtp`, `keycloak-smtp`)
 
+### Single-Node Constraints
+
+The cluster is one ARM64 node, so a rolling update that surges a second replica has nowhere to schedule and stalls indefinitely (seen with coder and istiod). When upgrading a chart:
+- Pin chart versions explicitly rather than tracking a floating range
+- Set `maxSurge: 0` (or the chart's equivalent) so the old pod is removed before the new one starts
+- All storage is `local-path` on the host filesystem — a PVC is bound to this node, and deleting it deletes the data
+
 ---
 
 ## Ansible Conventions
@@ -358,17 +400,16 @@ GitHub Actions triggers on `roles/**` or `ingress/**` changes. Supports manual d
 
 ## Current Applications
 
-### Active (deployed)
-Keycloak, n8n, Stakater Reloader, Garage, Forgejo, Dashy, Actual, Supabase, OpenClaw, Authentik, Open WebUI, Coder, Vikunja, WAHA, Omni, Tailscale, Alarik, Uptime Kuma, Outline, RustFS, Backstage, Atlantis
+`gitops/apps/kustomization.yaml` is the source of truth — check it rather than trusting this list.
 
-### Scaled to zero (commented out)
-Harbor, Minecraft, Rancher, XWiki, Wekan
+### Active (uncommented in the apps kustomization)
+Keycloak, n8n, Stakater Reloader, Garage, Forgejo, Dashy, Actual, OpenClaw, Authentik, Open WebUI, Coder, Vikunja, WAHA, Omni, Tailscale, Alarik, Uptime Kuma, Outline, RustFS, Backstage, Atlantis
 
-### In repo, not yet added to root kustomization
-Draw (Excalidraw), CodiMD, Nexus (stub — missing HelmRelease)
+### Commented out
+Harbor, Minecraft, Rancher, XWiki, Wekan (resource savings); Supabase (StatefulSet immutable-field error blocking Flux); Vault (awaiting initialization)
 
-### Placeholder (not yet deployed)
-Matrix
+### In repo, not referenced by any kustomization
+Draw (Excalidraw), CodiMD, Matrix (OCIRepository only), Nexus (stub — namespace only, no HelmRelease)
 
 ### Observability
-Prometheus (kube-prometheus-stack) + Thanos + Grafana + Alertmanager in `gitops/observability/`
+Prometheus (kube-prometheus-stack) + Thanos + Grafana + Alertmanager in `gitops/observability/`; Loki in `gitops/loki/`; Alloy in `gitops/alloy/`

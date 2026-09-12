@@ -7,6 +7,8 @@
 - [ ] Excalidraw
 - [X] Atlantis
 - [ ] Pigsty
+- [ ] [Kubevious](https://kubevious.io/)
+- [ ] [Mautic](https://mautic.org/download/)
 - [ ] Sonar / Nexus
 - [ ] https://github.com/xataio/xata
 - [ ] Loki Simple distributed
