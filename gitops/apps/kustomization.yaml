@@ -15,6 +15,7 @@ resources:
   - uptime-kuma
   - n8n
   - renovate-operator
+  - twenty
 
 #  - stakater       # rebuild: off
 #  - garage         # rebuild: off

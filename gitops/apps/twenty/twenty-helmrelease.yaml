@@ -1,0 +1,118 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: twenty
+  namespace: flux-system
+  labels:
+    app: twenty
+spec:
+  interval: 10m
+  timeout: 10m
+  targetNamespace: twenty
+  dependsOn:
+    - name: twenty-database
+  chart:
+    spec:
+      # Upstream publishes no chart to any registry — it lives only inside the
+      # 1.8GB twentyhq/twenty monorepo, which is far too heavy for a Flux
+      # GitRepository here. The chart is vendored to charts/twenty instead and
+      # read from the flux-system GitRepository that already tracks this repo.
+      chart: ./charts/twenty
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+      interval: 5m0s
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Chart fullname would otherwise be <release>-<chart>; Flux names the release
+    # twenty-twenty, so pin it for predictable Service/PVC names.
+    fullnameOverride: twenty
+
+    image:
+      repository: twentycrm/twenty
+      tag: "v2.39.5" # renovate: datasource=docker depName=twentycrm/twenty
+
+    storage:
+      type: local
+
+    # Encrypts tokens at rest. The chart's helper looks up the existing Secret
+    # before generating, so it survives upgrades — but NOT a namespace delete.
+    secrets:
+      tokens:
+        create: true
+        name: tokens
+
+    server:
+      enabled: true
+      replicaCount: 1
+      service:
+        port: 3000
+      # Routing is a separate HTTPRoute, per the convention here.
+      ingress:
+        enabled: false
+      env:
+        SIGN_IN_PREFILLED: "false"
+        SERVER_URL: "https://crm.vps.kubespaces.cloud"
+      persistence:
+        enabled: true
+        existingClaim: twenty-pvc
+      dockerDataPersistence:
+        enabled: true
+        size: 100Mi
+        storageClass: local-path
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: 1500m
+          memory: 2048Mi
+
+    worker:
+      enabled: true
+      replicaCount: 1
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          cpu: 1000m
+          memory: 1536Mi
+
+    # The chart's bundled Postgres is twentycrm/twenty-postgres-spilo:3.3-p2,
+    # a tag that does not exist in the registry (MANIFEST_UNKNOWN), and that
+    # repo has had no build since 2025-03. Use CNPG like every other app here.
+    # CNPG generates 64-char alphanumeric passwords, which matters because the
+    # chart interpolates the password into the DSN without url-encoding it.
+    db:
+      enabled: false
+      external:
+        host: twenty-twenty-database-cluster-rw
+        port: 5432
+        user: twenty
+        database: twenty
+        ssl: false
+        secretName: twenty-twenty-database-cluster-app
+        passwordKey: password
+
+    # Twenty needs Redis for its job queue. redis/redis-stack-server is
+    # multi-arch (arm64 verified), so the in-chart one is fine.
+    redisInternal:
+      enabled: true
+      persistence:
+        enabled: false
+      resources:
+        requests:
+          cpu: 50m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1024Mi

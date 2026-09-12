@@ -73,6 +73,9 @@ spec:
           Automation:
             style: row
             columns: 3
+          Business:
+            style: row
+            columns: 3
           Observability:
             style: row
             columns: 3
@@ -96,6 +99,11 @@ spec:
                 href: https://renovate.vps.kubespaces.cloud
                 description: In-cluster dependency updates, CRD-scheduled
                 icon: renovate.png
+        - Business:
+            - Twenty:
+                href: https://crm.vps.kubespaces.cloud
+                description: Open-source CRM
+                icon: twenty.png
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud

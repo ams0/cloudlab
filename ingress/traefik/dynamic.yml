@@ -41,6 +41,13 @@ http:
       tls:
         certResolver: letsencrypt
 
+    crm:
+      rule: "Host(`crm.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
     # Renovate Operator UI. No auth provider is configured in the chart, and the
     # operator treats every request as admin in that case, so it does not go out
     # unauthenticated. Drop the middleware once OIDC via Keycloak is wired up.
