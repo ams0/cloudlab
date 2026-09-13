@@ -74,7 +74,9 @@ spec:
         - name: EMAIL_SMTP_PORT
           value: "587"
         - name: EMAIL_SMTP_USER
-          value: alessandro
+          # Full address, not the bare account name: freedom.nl rejects
+          # "alessandro" with 535 and accepts "alessandro@freedom.nl".
+          value: alessandro@freedom.nl
         - name: EMAIL_SMTP_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -119,7 +121,9 @@ spec:
         - name: EMAIL_SMTP_PORT
           value: "587"
         - name: EMAIL_SMTP_USER
-          value: alessandro
+          # Full address, not the bare account name: freedom.nl rejects
+          # "alessandro" with 535 and accepts "alessandro@freedom.nl".
+          value: alessandro@freedom.nl
         - name: EMAIL_SMTP_PASSWORD
           valueFrom:
             secretKeyRef:

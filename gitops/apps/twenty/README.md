@@ -96,6 +96,10 @@ Without this, `EMAIL_DRIVER` defaults to `LOGGER`, which writes mail to the
 application log instead of sending it — password resets and invites appear to
 succeed but never arrive.
 
+`EMAIL_SMTP_USER` must be the **full address** (`alessandro@freedom.nl`).
+freedom.nl rejects the bare account name with `535 authentication failed` —
+verified against their server on both 587 and 465.
+
 `EMAIL_FROM_ADDRESS` is `alessandro@freedom.nl`. If the mailbox is on a custom
 domain rather than `@freedom.nl`, change it: many providers reject a From
 address the authenticated user is not allowed to send as.
