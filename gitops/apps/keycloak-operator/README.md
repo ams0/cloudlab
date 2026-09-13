@@ -117,8 +117,18 @@ metadata:
   namespace: keycloak-operator
 spec:
   name: platform-admins
-  realm: apps
+  # realmRef points at the KeycloakRealm *custom resource*, not the realm name.
+  # `realm: <name>` is rejected by the CRD's strict decoding.
+  realmRef:
+    name: apps
+    kind: KeycloakRealm
 ```
+
+**Deleting a CR deletes the real object.** Removing a `KeycloakRealm` removes the
+realm from Keycloak, users and all — the Kustomization has `prune: true`, so
+deleting the file from Git is enough to do it. Verified during commissioning: a
+throwaway realm and group were created, confirmed present through the Keycloak
+admin API, then deleted and confirmed gone.
 
 Available kinds: `KeycloakRealm`, `KeycloakRealmUser`, `KeycloakRealmGroup`,
 `KeycloakRealmRole`, `KeycloakRealmRoleBatch`, `KeycloakClient`,
