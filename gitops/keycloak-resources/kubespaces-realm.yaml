@@ -1,0 +1,42 @@
+---
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakRealm
+metadata:
+  name: kubespaces
+  namespace: keycloak-operator
+spec:
+  realmName: kubespaces
+  displayName: Kubespaces
+  keycloakRef:
+    name: keycloak
+    kind: Keycloak
+
+  login:
+    # No self-service signup: accounts are created deliberately, either as CRs
+    # here or through an identity provider.
+    userRegistration: false
+    loginWithEmail: true
+    forgotPassword: true
+    rememberMe: true
+    # Requires working SMTP on the realm; turn on once that is wired up.
+    verifyEmail: false
+    duplicateEmails: false
+
+  # This realm is reachable from the public internet, so lock out credential
+  # stuffing. Temporary lockout only — permanentLockout turns a brute-force
+  # attempt against a known username into a denial of service.
+  bruteForceDetection:
+    bruteForceProtected: true
+    permanentLockout: false
+    failureFactor: 10
+    waitIncrementSeconds: 60
+    maxFailureWaitSeconds: 900
+    maxDeltaTimeSeconds: 43200
+    quickLoginCheckMilliSeconds: 1000
+    minimumQuickLoginWaitSeconds: 60
+
+  passwordPolicy:
+    - type: length
+      value: "12"
+    - type: notUsername
+      value: "undefined"

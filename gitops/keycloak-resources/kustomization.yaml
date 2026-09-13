@@ -6,3 +6,4 @@ kind: Kustomization
 # installs, so they must be applied in a later pass. See the app README.
 resources:
   - keycloak-connection.yaml
+  - kubespaces-realm.yaml
