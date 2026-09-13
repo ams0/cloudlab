@@ -5,4 +5,4 @@ resources:
   - namespace.yaml
   - keycloak-operator-helmrepo.yaml
   - keycloak-operator-helmrelease.yaml
-  - keycloak-connection.yaml
+  - keycloak-resources-kustomization.yaml

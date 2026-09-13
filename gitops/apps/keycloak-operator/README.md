@@ -12,7 +12,9 @@ It has no UI and serves no traffic, so there is no HTTPRoute.
 - `namespace.yaml` — namespace
 - `keycloak-operator-helmrepo.yaml` — HelmRepository (EDP stable charts)
 - `keycloak-operator-helmrelease.yaml` — Flux HelmRelease, `dependsOn: keycloak`
-- `keycloak-connection.yaml` — the `Keycloak` CR pointing at our Keycloak
+- `keycloak-resources-kustomization.yaml` — a second Flux Kustomization for the CRs
+
+The Keycloak CRs themselves live in **`gitops/keycloak-resources/`**, not here.
 
 ## Why this operator and not the official one
 
@@ -69,13 +71,32 @@ need to sit beside the apps that consume them.
 Addressing it by the same name avoids issuer mismatches; the cost is a hairpin
 through host Traefik, which is irrelevant at this request volume.
 
-**First reconcile retries.** The `Keycloak` CR's CRD is installed by the chart,
-so on a from-scratch apply the CR fails once and Flux retries on its next
-1-minute interval. Self-healing, but expect one transient failure.
+## Why the CRs are in a separate Kustomization
+
+They cannot sit in the root `gitops` kustomization alongside the HelmRelease.
+kustomize-controller server-side dry-runs every object before applying anything,
+and a CR whose CRD does not exist yet fails that dry-run:
+
+```
+Keycloak/keycloak-operator/keycloak dry-run failed:
+  no matches for kind "Keycloak" in version "v1.edp.epam.com/v1"
+```
+
+That failure aborts the **entire** apply — so the HelmRelease that would have
+installed the CRD is never created, and it deadlocks instead of self-healing. It
+also holds the whole `flux-system` Kustomization at `Ready=False`, which stalls
+every other app.
+
+So `gitops/keycloak-resources/` is applied by its own Flux Kustomization that
+`dependsOn: flux-system`. It reconciles after the operator is installed and
+retries on its own interval until the CRDs exist. Any new realm/group/role CRs
+belong in that directory, not in `gitops/apps/`.
 
 ## Usage
 
-All CRs go in this namespace and reference the connection by `keycloakRef`:
+Add new CRs to `gitops/keycloak-resources/` (and list them in that directory's
+`kustomization.yaml`). They go in the `keycloak-operator` namespace and
+reference the connection by `keycloakRef`:
 
 ```yaml
 apiVersion: v1.edp.epam.com/v1

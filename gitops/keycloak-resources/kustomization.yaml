@@ -1,0 +1,8 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Applied by the "keycloak-resources" Flux Kustomization, NOT by the root
+# gitops kustomization — these objects use CRDs that the operator's HelmRelease
+# installs, so they must be applied in a later pass. See the app README.
+resources:
+  - keycloak-connection.yaml

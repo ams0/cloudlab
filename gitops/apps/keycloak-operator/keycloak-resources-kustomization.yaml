@@ -1,0 +1,28 @@
+---
+# Keycloak CRs (the connection, plus any realms/groups/roles) are applied by a
+# SEPARATE Flux Kustomization that depends on flux-system.
+#
+# They cannot live in the root kustomization: kustomize-controller server-side
+# dry-runs every object before applying, and a CR whose CRD does not exist yet
+# fails that dry-run — which aborts the entire apply, so the HelmRelease that
+# would have installed the CRD never gets created. That deadlocks rather than
+# self-healing. Splitting them lets this Kustomization retry on its own until
+# the operator's CRDs exist.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: keycloak-resources
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 2m
+  path: ./gitops/keycloak-resources
+  prune: true
+  # No health checks: Flux has no built-in readiness semantics for these kinds.
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: flux-system
