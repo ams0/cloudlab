@@ -364,3 +364,26 @@
     - keycloak_operator_secret_check.rc != 0
     - vault_keycloak_operator_client_secret is defined
     - vault_keycloak_operator_client_secret | default('') | trim | length > 0
+
+- name: Create twenty namespace if not exists
+  shell: kubectl create namespace twenty --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if twenty smtp secret exists
+  shell: kubectl -n twenty get secret twenty-smtp
+  register: twenty_smtp_secret_check
+  failed_when: false
+  changed_when: false
+
+# freedom.nl mailbox password. Contains shell metacharacters (% ^ @ &), hence
+# the quote filter — see the forgejo-smtp bug where an unquoted Google app
+# password split into four argv entries.
+- name: Create twenty smtp secret
+  shell: |
+    kubectl -n twenty create secret generic twenty-smtp \
+      --from-literal=password={{ vault_twenty_smtp_password | quote }}
+  no_log: true
+  when:
+    - twenty_smtp_secret_check.rc != 0
+    - vault_twenty_smtp_password is defined
+    - vault_twenty_smtp_password | default('') | trim | length > 0

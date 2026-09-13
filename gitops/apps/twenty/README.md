@@ -81,6 +81,25 @@ unreadable**. Back it up:
 kubectl get secret tokens -n twenty -o jsonpath='{.data.accessToken}' | base64 -d
 ```
 
+## Email (SMTP)
+
+Mail goes through freedom.nl (`smtp.freedom.nl:587`, STARTTLS; 465 would be
+implicit SSL). Configured via `extraEnv` on **both** the server and the worker —
+Twenty dispatches mail through its job queue, so the worker needs the
+credentials too.
+
+The mailbox password is **not** in this repo. It lives in the Ansible vault as
+`vault_twenty_smtp_password`, and `roles/flux` creates the `twenty-smtp` Secret
+that `EMAIL_SMTP_PASSWORD` reads through a `secretKeyRef`.
+
+Without this, `EMAIL_DRIVER` defaults to `LOGGER`, which writes mail to the
+application log instead of sending it — password resets and invites appear to
+succeed but never arrive.
+
+`EMAIL_FROM_ADDRESS` is `alessandro@freedom.nl`. If the mailbox is on a custom
+domain rather than `@freedom.nl`, change it: many providers reject a From
+address the authenticated user is not allowed to send as.
+
 ## First run
 
 There is no seeded admin. Visit the URL and sign up; the first account becomes

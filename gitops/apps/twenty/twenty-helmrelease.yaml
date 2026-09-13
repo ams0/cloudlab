@@ -61,6 +61,31 @@ spec:
       env:
         SIGN_IN_PREFILLED: "false"
         SERVER_URL: "https://crm.vps.kubespaces.cloud"
+
+      # SMTP via freedom.nl (smtp.freedom.nl, 587 = STARTTLS; 465 would be
+      # implicit SSL). Without this Twenty's EMAIL_DRIVER defaults to LOGGER,
+      # which silently writes mail to the log instead of sending it — so
+      # password reset and invites appear to work but never arrive.
+      extraEnv:
+        - name: EMAIL_DRIVER
+          value: smtp
+        - name: EMAIL_SMTP_HOST
+          value: smtp.freedom.nl
+        - name: EMAIL_SMTP_PORT
+          value: "587"
+        - name: EMAIL_SMTP_USER
+          value: alessandro
+        - name: EMAIL_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Created by roles/flux from vault_twenty_smtp_password.
+              name: twenty-smtp
+              key: password
+        - name: EMAIL_FROM_ADDRESS
+          value: alessandro@freedom.nl
+        - name: EMAIL_FROM_NAME
+          value: CloudLab CRM
+
       persistence:
         enabled: true
         existingClaim: twenty-pvc
@@ -79,6 +104,33 @@ spec:
     worker:
       enabled: true
       replicaCount: 1
+
+      # Twenty dispatches mail through the job queue, so the worker needs the
+      # same SMTP configuration as the server.
+      # SMTP via freedom.nl (smtp.freedom.nl, 587 = STARTTLS; 465 would be
+      # implicit SSL). Without this Twenty's EMAIL_DRIVER defaults to LOGGER,
+      # which silently writes mail to the log instead of sending it — so
+      # password reset and invites appear to work but never arrive.
+      extraEnv:
+        - name: EMAIL_DRIVER
+          value: smtp
+        - name: EMAIL_SMTP_HOST
+          value: smtp.freedom.nl
+        - name: EMAIL_SMTP_PORT
+          value: "587"
+        - name: EMAIL_SMTP_USER
+          value: alessandro
+        - name: EMAIL_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              # Created by roles/flux from vault_twenty_smtp_password.
+              name: twenty-smtp
+              key: password
+        - name: EMAIL_FROM_ADDRESS
+          value: alessandro@freedom.nl
+        - name: EMAIL_FROM_NAME
+          value: CloudLab CRM
+
       resources:
         requests:
           cpu: 100m
