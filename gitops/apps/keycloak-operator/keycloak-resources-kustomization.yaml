@@ -24,5 +24,9 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: flux-system
+# Deliberately no dependsOn: flux-system. The parent Kustomization runs with
+# wait: true, so it health-checks the objects it applies — including this
+# Kustomization. Depending on the parent therefore deadlocks both: the parent
+# waits for this to go healthy while this waits for the parent to go ready.
+# retryInterval alone is enough, since all this needs is to retry until the
+# operator's CRDs exist.
