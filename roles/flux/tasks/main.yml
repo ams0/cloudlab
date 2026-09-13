@@ -341,3 +341,26 @@
     - velero_secret_check.rc != 0
     - velero_s3_access_key is defined
     - velero_s3_secret_key is defined
+
+- name: Create keycloak-operator namespace if not exists
+  shell: kubectl create namespace keycloak-operator --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if keycloak-operator auth secret exists
+  shell: kubectl -n keycloak-operator get secret keycloak-operator-auth
+  register: keycloak_operator_secret_check
+  failed_when: false
+  changed_when: false
+
+# Credentials for the "keycloak-operator" service-account client in the master
+# realm. The operator uses the client_credentials grant, so the Keycloak admin
+# user's own password never enters the cluster.
+- name: Create keycloak-operator auth secret
+  shell: |
+    kubectl -n keycloak-operator create secret generic keycloak-operator-auth \
+      --from-literal=client-secret={{ vault_keycloak_operator_client_secret | quote }}
+  no_log: true
+  when:
+    - keycloak_operator_secret_check.rc != 0
+    - vault_keycloak_operator_client_secret is defined
+    - vault_keycloak_operator_client_secret | default('') | trim | length > 0

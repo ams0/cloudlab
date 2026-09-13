@@ -1,0 +1,23 @@
+---
+# Connection to the Keycloak deployed by gitops/apps/keycloak. Every
+# KeycloakRealm / KeycloakRealmGroup / KeycloakRealmUser CR in this namespace
+# points at this object via keycloakRef.
+apiVersion: v1.edp.epam.com/v1
+kind: Keycloak
+metadata:
+  name: keycloak
+  namespace: keycloak-operator
+spec:
+  # Public URL rather than the in-cluster Service. Keycloak is configured with
+  # KC_HOSTNAME=https://auth.vps.kubespaces.cloud, so tokens it issues carry
+  # that issuer; calling it by the same name avoids issuer/redirect mismatches.
+  # Cost is a hairpin through host Traefik, which is irrelevant at this volume.
+  url: https://auth.vps.kubespaces.cloud
+  auth:
+    clientCredentials:
+      clientId:
+        value: keycloak-operator
+      clientSecretRef:
+        # Created by roles/flux (Ansible) from vault_keycloak_operator_client_secret.
+        name: keycloak-operator-auth
+        key: client-secret
