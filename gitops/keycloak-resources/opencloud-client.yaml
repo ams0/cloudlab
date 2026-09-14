@@ -30,10 +30,16 @@ spec:
     - https://opencloud.vps.kubespaces.cloud/oidc-silent-redirect.html
   webOrigins:
     - https://opencloud.vps.kubespaces.cloud
+  # "openid" is NOT a client scope in Keycloak — it is the scope parameter on
+  # the authorization request, always implicit for openid-connect clients.
+  # Listing it here makes the operator fail with "client scope openid not found".
   defaultClientScopes:
-    - openid
+    - basic
+    - acr
     - profile
     - email
+    - roles
+    - web-origins
   advancedProtocolMappers: true
   attributes:
     pkce.code.challenge.method: "S256"
