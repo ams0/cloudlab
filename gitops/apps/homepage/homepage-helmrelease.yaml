@@ -76,6 +76,9 @@ spec:
           Business:
             style: row
             columns: 3
+          Files:
+            style: row
+            columns: 3
           Observability:
             style: row
             columns: 3
@@ -104,6 +107,11 @@ spec:
                 href: https://crm.vps.kubespaces.cloud
                 description: Open-source CRM
                 icon: twenty.png
+        - Files:
+            - OpenCloud:
+                href: https://opencloud.vps.kubespaces.cloud
+                description: File sync and share, SSO via Keycloak
+                icon: opencloud.png
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud
