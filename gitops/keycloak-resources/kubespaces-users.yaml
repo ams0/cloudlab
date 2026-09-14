@@ -1,0 +1,29 @@
+---
+# Seed account for the kubespaces realm. The realm has self-registration
+# disabled, so without at least one user nobody can log in to anything that
+# authenticates against it — including OpenCloud.
+#
+# OpenCloud autoprovisions its own LDAP entry for this user on first login,
+# keyed on the immutable `sub` claim.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakRealmUser
+metadata:
+  name: alessandro
+  namespace: keycloak-operator
+spec:
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  username: alessandro
+  email: alessandro@fromvolt.com
+  firstName: Alessandro
+  lastName: Vozza
+  enabled: true
+  emailVerified: true
+  # Created by roles/flux from vault_opencloud_user_password.
+  passwordSecret:
+    name: opencloud-user
+    key: password
+  # Keep the Keycloak user if this CR is ever removed, so deleting the manifest
+  # cannot lock the realm out.
+  keepResource: true

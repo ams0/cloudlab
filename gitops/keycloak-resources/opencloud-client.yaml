@@ -1,0 +1,42 @@
+---
+# OIDC client for the OpenCloud web UI. Mirrors upstream's
+# config/keycloak/clients/web.json from opencloud-compose: a public client
+# using the authorization-code flow, with OpenCloud's two callback pages.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: opencloud-web
+  namespace: keycloak-operator
+spec:
+  clientId: web
+  name: OpenCloud Web App
+  description: OpenCloud web UI (public client, authorization code + PKCE)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  # Browser app: no secret can be kept, so it is public and relies on PKCE.
+  public: true
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  # Upstream enables this so WebDAV clients that cannot do OIDC can still
+  # authenticate. Turn off if only browser access is wanted.
+  directAccess: true
+  webUrl: https://opencloud.vps.kubespaces.cloud
+  redirectUris:
+    - https://opencloud.vps.kubespaces.cloud/
+    - https://opencloud.vps.kubespaces.cloud/oidc-callback.html
+    - https://opencloud.vps.kubespaces.cloud/oidc-silent-redirect.html
+  webOrigins:
+    - https://opencloud.vps.kubespaces.cloud
+  defaultClientScopes:
+    - openid
+    - profile
+    - email
+  advancedProtocolMappers: true
+  attributes:
+    pkce.code.challenge.method: "S256"
+    post.logout.redirect.uris: "+"
+    backchannel.logout.session.required: "true"
+    backchannel.logout.url: "https://opencloud.vps.kubespaces.cloud/backchannel_logout"

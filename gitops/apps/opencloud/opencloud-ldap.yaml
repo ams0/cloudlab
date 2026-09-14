@@ -1,0 +1,110 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencloud-ldap
+  namespace: opencloud
+  labels:
+    app: opencloud-ldap
+spec:
+  replicas: 1
+  # Single node + RWO volume: the old pod must release the PVC before the new
+  # one can bind it.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opencloud-ldap
+  template:
+    metadata:
+      labels:
+        app: opencloud-ldap
+    spec:
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: openldap
+          # Bitnami moved its catalogue behind a subscription in 2025; the
+          # "bitnamilegacy" namespace is the frozen public mirror. Pinned by
+          # digest-free tag because nothing newer is published — see README.
+          image: bitnamilegacy/openldap:2.6.10
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LDAP_ROOT
+              value: dc=opencloud,dc=eu
+            - name: LDAP_ADMIN_USERNAME
+              value: admin
+            - name: LDAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opencloud-ldap
+                  key: adminPassword
+            - name: LDAP_PORT_NUMBER
+              value: "1389"
+            # Seed the directory structure and OpenCloud's custom schema. Both
+            # only apply on an empty database — they are not re-run.
+            - name: LDAP_CUSTOM_SCHEMA_FILE
+              value: /schema/10_opencloud_schema.ldif
+            - name: LDAP_CUSTOM_LDIF_DIR
+              value: /ldifs
+            - name: LDAP_SKIP_DEFAULT_TREE
+              value: "yes"
+          ports:
+            - name: ldap
+              containerPort: 1389
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/openldap
+            - name: schema
+              mountPath: /schema
+            - name: ldifs
+              mountPath: /ldifs
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+          readinessProbe:
+            tcpSocket:
+              port: ldap
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: ldap
+            initialDelaySeconds: 60
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: opencloud-ldap-data
+        - name: schema
+          configMap:
+            name: opencloud-ldap-schema
+            items:
+              - key: 10_opencloud_schema.ldif
+                path: 10_opencloud_schema.ldif
+        - name: ldifs
+          configMap:
+            name: opencloud-ldap-schema
+            items:
+              - key: 10_base.ldif
+                path: 10_base.ldif
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencloud-ldap
+  namespace: opencloud
+  labels:
+    app: opencloud-ldap
+spec:
+  type: ClusterIP
+  selector:
+    app: opencloud-ldap
+  ports:
+    - name: ldap
+      port: 1389
+      targetPort: ldap

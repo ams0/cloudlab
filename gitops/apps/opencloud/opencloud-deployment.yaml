@@ -1,0 +1,196 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencloud
+  namespace: opencloud
+  labels:
+    app: opencloud
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opencloud
+  template:
+    metadata:
+      labels:
+        app: opencloud
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: opencloud
+          image: opencloudeu/opencloud-rolling:7.5.0 # renovate: datasource=docker depName=opencloudeu/opencloud-rolling
+          imagePullPolicy: IfNotPresent
+          # `opencloud init` generates service secrets into /etc/opencloud on
+          # first boot and fails once they exist, hence the `|| true`. This is
+          # upstream's own entrypoint from opencloud-compose.
+          command: ["/bin/sh", "-c"]
+          args: ["opencloud init || true; opencloud server"]
+          env:
+            - name: OC_URL
+              value: https://opencloud.vps.kubespaces.cloud
+            - name: OC_LOG_LEVEL
+              value: info
+            - name: OC_LOG_COLOR
+              value: "false"
+            # TLS terminates at host Traefik, so OpenCloud speaks plain HTTP.
+            - name: PROXY_TLS
+              value: "false"
+            - name: OC_INSECURE
+              value: "false"
+
+            # ── External identity: Keycloak replaces the built-in idp AND idm.
+            # Upstream is explicit that Keycloak with the built-in idm is not
+            # supported, which is why the openldap deployment exists.
+            - name: OC_EXCLUDE_RUN_SERVICES
+              value: idp,idm
+            - name: OC_OIDC_ISSUER
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces
+            - name: OC_OIDC_CLIENT_ID
+              value: web
+            - name: PROXY_OIDC_REWRITE_WELLKNOWN
+              value: "true"
+            - name: IDP_DOMAIN
+              value: auth.vps.kubespaces.cloud
+            - name: WEB_OPTION_ACCOUNT_EDIT_LINK_HREF
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces/account
+
+            # ── LDAP directory
+            - name: OC_LDAP_URI
+              value: ldap://opencloud-ldap.opencloud.svc.cluster.local:1389
+            - name: OC_LDAP_INSECURE
+              value: "true"
+            - name: OC_LDAP_BIND_DN
+              value: cn=admin,dc=opencloud,dc=eu
+            - name: OC_LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opencloud-ldap
+                  key: adminPassword
+            - name: OC_LDAP_GROUP_BASE_DN
+              value: ou=groups,dc=opencloud,dc=eu
+            - name: OC_LDAP_USER_BASE_DN
+              value: ou=users,dc=opencloud,dc=eu
+            - name: OC_LDAP_USER_FILTER
+              value: "(objectclass=inetOrgPerson)"
+            - name: OC_LDAP_USER_SCHEMA_ID
+              value: opencloudUUID
+            - name: OC_LDAP_GROUP_SCHEMA_ID
+              value: opencloudUUID
+            - name: OC_LDAP_DISABLE_USER_MECHANISM
+              value: attribute
+            - name: OC_LDAP_SERVER_WRITE_ENABLED
+              value: "true"
+            - name: GRAPH_LDAP_SERVER_UUID
+              value: "false"
+            - name: GRAPH_LDAP_REFINT_ENABLED
+              value: "true"
+            - name: GRAPH_USERNAME_MATCH
+              value: "none"
+
+            # ── Autoprovisioning: Keycloak is the source of truth. A user who
+            # logs in for the first time gets an LDAP entry created for them,
+            # keyed on the immutable `sub` claim so a rename in Keycloak does
+            # not orphan their files.
+            - name: PROXY_AUTOPROVISION_ACCOUNTS
+              value: "true"
+            - name: PROXY_USER_OIDC_CLAIM
+              value: "sub"
+            - name: PROXY_AUTOPROVISION_CLAIM_USERNAME
+              value: "sub"
+            - name: PROXY_USER_CS3_CLAIM
+              value: "username"
+
+            # Every authenticated Keycloak user gets the default OpenCloud role.
+            # Upstream's compose uses the oidc driver with a `roles` claim, which
+            # needs a Keycloak mapper emitting OpenCloud role names; without it
+            # nobody can do anything. Start permissive, tighten once roles are
+            # modelled in the realm. Admin is granted via OC_ADMIN_USER_ID below.
+            - name: PROXY_ROLE_ASSIGNMENT_DRIVER
+              value: "default"
+            - name: GRAPH_ASSIGN_DEFAULT_USER_ROLE
+              value: "true"
+            - name: SETTINGS_SETUP_DEFAULT_ASSIGNMENTS
+              value: "false"
+
+            - name: FRONTEND_READONLY_USER_ATTRIBUTES
+              value: "user.onPremisesSamAccountName,user.displayName,user.mail,user.passwordProfile,user.accountEnabled,user.appRoleAssignments"
+            - name: OC_PASSWORD_POLICY_DISABLED
+              value: "true"
+            - name: IDM_CREATE_DEMO_USERS
+              value: "false"
+            - name: FRONTEND_CHECK_FOR_UPDATES
+              value: "false"
+
+            # ── Notifications via freedom.nl, same mailbox as Twenty.
+            - name: NOTIFICATIONS_SMTP_HOST
+              value: smtp.freedom.nl
+            - name: NOTIFICATIONS_SMTP_PORT
+              value: "587"
+            - name: NOTIFICATIONS_SMTP_SENDER
+              value: "OpenCloud <alessandro@freedom.nl>"
+            - name: NOTIFICATIONS_SMTP_USERNAME
+              value: alessandro@freedom.nl
+            - name: NOTIFICATIONS_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opencloud-smtp
+                  key: password
+            - name: NOTIFICATIONS_SMTP_AUTHENTICATION
+              value: login
+            - name: NOTIFICATIONS_SMTP_ENCRYPTION
+              value: starttls
+          ports:
+            - name: http
+              containerPort: 9200
+          volumeMounts:
+            - name: config
+              mountPath: /etc/opencloud
+            - name: data
+              mountPath: /var/lib/opencloud
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2560Mi
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: opencloud-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: opencloud-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opencloud
+  namespace: opencloud
+  labels:
+    app: opencloud
+spec:
+  type: ClusterIP
+  selector:
+    app: opencloud
+  ports:
+    - name: http
+      port: 9200
+      targetPort: http

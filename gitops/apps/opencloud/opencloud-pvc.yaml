@@ -1,0 +1,42 @@
+---
+# Blobs, spaces and the search index. This is the one that matters.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-data
+  namespace: opencloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+# `opencloud init` writes generated service secrets here on first boot. Losing
+# it invalidates every issued token and the running instance's service auth.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-config
+  namespace: opencloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opencloud-ldap-data
+  namespace: opencloud
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

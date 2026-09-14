@@ -17,6 +17,7 @@ resources:
   - n8n
   - renovate-operator
   - twenty
+  - opencloud
 
 #  - stakater       # rebuild: off
 #  - garage         # rebuild: off

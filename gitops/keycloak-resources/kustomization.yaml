@@ -7,3 +7,5 @@ kind: Kustomization
 resources:
   - keycloak-connection.yaml
   - kubespaces-realm.yaml
+  - kubespaces-users.yaml
+  - opencloud-client.yaml

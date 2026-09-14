@@ -387,3 +387,57 @@
     - twenty_smtp_secret_check.rc != 0
     - vault_twenty_smtp_password is defined
     - vault_twenty_smtp_password | default('') | trim | length > 0
+
+- name: Create opencloud namespace if not exists
+  shell: kubectl create namespace opencloud --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if opencloud ldap secret exists
+  shell: kubectl -n opencloud get secret opencloud-ldap
+  register: opencloud_ldap_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create opencloud ldap secret
+  shell: |
+    kubectl -n opencloud create secret generic opencloud-ldap \
+      --from-literal=adminPassword={{ vault_opencloud_ldap_admin_password | quote }}
+  no_log: true
+  when:
+    - opencloud_ldap_secret_check.rc != 0
+    - vault_opencloud_ldap_admin_password | default('') | trim | length > 0
+
+# Password for the seed Keycloak user in the kubespaces realm. Lives in the
+# keycloak-operator namespace because that is where KeycloakRealmUser CRs are
+# reconciled from.
+- name: Check if opencloud keycloak user secret exists
+  shell: kubectl -n keycloak-operator get secret opencloud-user
+  register: opencloud_user_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create opencloud keycloak user secret
+  shell: |
+    kubectl -n keycloak-operator create secret generic opencloud-user \
+      --from-literal=password={{ vault_opencloud_user_password | quote }}
+  no_log: true
+  when:
+    - opencloud_user_secret_check.rc != 0
+    - vault_opencloud_user_password | default('') | trim | length > 0
+
+# Same freedom.nl mailbox Twenty uses; the vault key is named after the app
+# that introduced it rather than the mailbox. One credential, two consumers.
+- name: Check if opencloud smtp secret exists
+  shell: kubectl -n opencloud get secret opencloud-smtp
+  register: opencloud_smtp_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create opencloud smtp secret
+  shell: |
+    kubectl -n opencloud create secret generic opencloud-smtp \
+      --from-literal=password={{ vault_twenty_smtp_password | quote }}
+  no_log: true
+  when:
+    - opencloud_smtp_secret_check.rc != 0
+    - vault_twenty_smtp_password | default('') | trim | length > 0
