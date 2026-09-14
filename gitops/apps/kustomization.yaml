@@ -17,7 +17,7 @@ resources:
   - n8n
   - renovate-operator
   - twenty
-  - opencloud
+#  - opencloud     # disabled — manifests kept, re-enable by uncommenting
 
 #  - stakater       # rebuild: off
 #  - garage         # rebuild: off
