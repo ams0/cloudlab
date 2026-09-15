@@ -69,6 +69,25 @@ this arm64 host. Persistence is off — it only backs the job queue.
 ingress host, and the ingress is disabled here in favour of an HTTPRoute, so
 without it Twenty would generate links against the wrong origin.
 
+## AI models
+
+AI has no enable flag — it turns on when a provider key is present. Configured
+here with Google AI Studio (`GOOGLE_API_KEY`), on both server and worker.
+
+Twenty defines five model tiers (extraFast → extraSmart), each an **ordered
+fallback list**, and uses the first model whose provider key is set. Because
+`google/gemini-3.8-flash` sits second in all five lists, one Google key backs
+every tier. Adding `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` later shifts the
+tiers automatically — no other change needed.
+
+The key lives in the vault as `vault_twenty_google_api_key`; `roles/flux`
+creates the `twenty-ai` Secret.
+
+Caveat: the tier fallback applies to a *missing provider key*, not to runtime
+errors. `gemini-3.8-flash` returned `503 UNAVAILABLE — high demand` on one of
+three test calls, and that surfaces as a failed AI action rather than falling
+through to the next model in the tier.
+
 ## APP_SECRET
 
 `APP_SECRET` comes from the `tokens` Secret, which the chart generates on first

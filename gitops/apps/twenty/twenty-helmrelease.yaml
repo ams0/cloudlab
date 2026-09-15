@@ -95,6 +95,17 @@ spec:
         - name: LOGIC_FUNCTION_TYPE
           value: LOCAL
 
+        # AI features turn on purely by the presence of a provider key — there
+        # is no separate enable flag. Each model tier is an ordered fallback
+        # list and Twenty picks the first model whose provider key is set, so
+        # with only Google configured every tier resolves to Gemini.
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              # Created by roles/flux from vault_twenty_google_api_key.
+              name: twenty-ai
+              key: googleApiKey
+
       persistence:
         enabled: true
         existingClaim: twenty-pvc
@@ -148,6 +159,17 @@ spec:
         # the server and worker containers rather than shipping it to Lambda.
         - name: LOGIC_FUNCTION_TYPE
           value: LOCAL
+
+        # AI features turn on purely by the presence of a provider key — there
+        # is no separate enable flag. Each model tier is an ordered fallback
+        # list and Twenty picks the first model whose provider key is set, so
+        # with only Google configured every tier resolves to Gemini.
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              # Created by roles/flux from vault_twenty_google_api_key.
+              name: twenty-ai
+              key: googleApiKey
 
       resources:
         requests:

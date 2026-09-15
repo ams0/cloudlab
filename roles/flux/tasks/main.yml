@@ -441,3 +441,21 @@
   when:
     - opencloud_smtp_secret_check.rc != 0
     - vault_twenty_smtp_password | default('') | trim | length > 0
+
+# Google AI Studio key for Twenty's AI features. Twenty's model tiers each list
+# google/gemini-3.8-flash as the second fallback, so this one key backs every
+# tier (extraFast through extraSmart) with no OpenAI/Anthropic key present.
+- name: Check if twenty ai secret exists
+  shell: kubectl -n twenty get secret twenty-ai
+  register: twenty_ai_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create twenty ai secret
+  shell: |
+    kubectl -n twenty create secret generic twenty-ai \
+      --from-literal=googleApiKey={{ vault_twenty_google_api_key | quote }}
+  no_log: true
+  when:
+    - twenty_ai_secret_check.rc != 0
+    - vault_twenty_google_api_key | default('') | trim | length > 0
