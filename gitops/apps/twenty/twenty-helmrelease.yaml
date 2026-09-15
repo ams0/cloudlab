@@ -88,6 +88,13 @@ spec:
         - name: EMAIL_FROM_NAME
           value: CloudLab CRM
 
+        # Logic functions / code interpreter. Defaults to DISABLED whenever
+        # NODE_ENV is production (LOCAL only by default in development), so it
+        # has to be set explicitly here. LOCAL executes function code inside
+        # the server and worker containers rather than shipping it to Lambda.
+        - name: LOGIC_FUNCTION_TYPE
+          value: LOCAL
+
       persistence:
         enabled: true
         existingClaim: twenty-pvc
@@ -134,6 +141,13 @@ spec:
           value: alessandro@freedom.nl
         - name: EMAIL_FROM_NAME
           value: CloudLab CRM
+
+        # Logic functions / code interpreter. Defaults to DISABLED whenever
+        # NODE_ENV is production (LOCAL only by default in development), so it
+        # has to be set explicitly here. LOCAL executes function code inside
+        # the server and worker containers rather than shipping it to Lambda.
+        - name: LOGIC_FUNCTION_TYPE
+          value: LOCAL
 
       resources:
         requests:
