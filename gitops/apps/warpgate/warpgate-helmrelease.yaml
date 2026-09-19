@@ -1,0 +1,127 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: warpgate
+  namespace: flux-system
+  labels:
+    app: warpgate
+spec:
+  interval: 10m
+  timeout: 10m
+  targetNamespace: warpgate
+  dependsOn:
+    - name: warpgate-database
+  chart:
+    spec:
+      chart: ./helm/warpgate
+      sourceRef:
+        kind: GitRepository
+        name: warpgate
+        namespace: flux-system
+      interval: 5m0s
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    replicaCount: 1
+
+    # ── HTTP only, for now ───────────────────────────────────────────────
+    # Warpgate is a bastion and also speaks SSH, MySQL and Postgres, but all
+    # three are raw TCP and this cluster only has HTTP ingress today
+    # (Traefik :443 -> Istio gateway NodePort -> HTTPRoute). Those ports are
+    # switched off rather than exposed on a service nothing can reach.
+    # Turning SSH on later means a TCP listener on the Gateway plus a TCPRoute
+    # (the experimental CRDs are already installed), a host firewall rule and
+    # a matching OCI security-list rule.
+    setup:
+      enabled: true
+      type: job
+      http: 8888
+      ssh: 0
+      mysql: 0
+      pgsql: 0
+      kubernetes: 0
+      recordSessions: true
+      # CNPG owns the database. The password is substituted from the
+      # environment so the DSN never appears in Git.
+      databaseUrl: "postgres://warpgate:$WARPGATE_DB_PASSWORD@warpgate-warpgate-database-cluster-rw:5432/warpgate"
+      envFromSecret:
+        WARPGATE_ADMIN_PASSWORD: "warpgate-secret/adminPassword"
+        WARPGATE_DB_PASSWORD: "warpgate-warpgate-database-cluster-app/password"
+
+    service:
+      type: ClusterIP
+      ports:
+        http: 8888
+        ssh: 0
+        mysql: 0
+        pgsql: 0
+        kubernetes: 0
+
+    # ── Routing ──────────────────────────────────────────────────────────
+    # The chart emits a Gateway API HTTPRoute natively, so there is no separate
+    # {app}-httproute.yaml here — one fewer place for the backend name to drift.
+    ingress:
+      enabled: false
+    httpRoute:
+      enabled: true
+      parentRefs:
+        - name: gateway
+          namespace: istio-system
+          sectionName: http
+      hostnames:
+        - warpgate.vps.kubespaces.cloud
+
+    # ── Config ───────────────────────────────────────────────────────────
+    # A full config override, because SSO providers have no values-level knob.
+    # Based on the chart's own generated config (see warpgate.config in
+    # _helpers.tpl) with sso_providers and external_host added.
+    #
+    # $VARS listed in config_env_var_replace are substituted from the pod
+    # environment at startup, which keeps both the database password and the
+    # OIDC client secret out of the repo.
+    config_env_var_replace: "WARPGATE_DB_PASSWORD WARPGATE_SSO_CLIENT_SECRET"
+    overrides_config: |
+      database_url: "postgres://warpgate:$WARPGATE_DB_PASSWORD@warpgate-warpgate-database-cluster-rw:5432/warpgate"
+      http:
+        enable: true
+        listen: "0.0.0.0:8888"
+        certificate: /data/tls.certificate.pem
+        key: /data/tls.key.pem
+        external_host: warpgate.vps.kubespaces.cloud
+      sso_providers:
+        - name: keycloak
+          label: Kubespaces
+          provider:
+            type: custom
+            client_id: warpgate
+            client_secret: "$WARPGATE_SSO_CLIENT_SECRET"
+            issuer_url: https://auth.vps.kubespaces.cloud/realms/kubespaces
+            scopes:
+              - openid
+              - profile
+              - email
+
+    envFromSecret:
+      WARPGATE_DB_PASSWORD: "warpgate-warpgate-database-cluster-app/password"
+      WARPGATE_SSO_CLIENT_SECRET: "warpgate-sso/clientSecret"
+      # Encrypts stored target credentials at rest.
+      WARPGATE_ENCRYPTION_KEY: "warpgate-secret/encryptionKey"
+
+    data:
+      pvc:
+        enabled: true
+        claimName: warpgate-pvc
+
+    resources:
+      requests:
+        cpu: 20m
+        memory: 128Mi
+      limits:
+        cpu: 1000m
+        memory: 768Mi

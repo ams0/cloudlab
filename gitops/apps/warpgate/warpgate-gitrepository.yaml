@@ -1,0 +1,20 @@
+---
+# Warpgate publishes no chart to a registry — the official chart lives in the
+# repo at helm/warpgate. The repo is only ~9MB, so a GitRepository is fine here
+# (the pattern Garage uses); contrast OpenCloud, whose 1.8GB monorepo forced
+# vendoring instead.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: warpgate
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: https://github.com/warp-tech/warpgate
+  ref:
+    # Pinned to a release tag, not a branch — the chart is versioned 0.1.0 and
+    # never bumped, so the tag is the only real version signal.
+    tag: v0.29.0
+  ignore: |
+    /*
+    !/helm/

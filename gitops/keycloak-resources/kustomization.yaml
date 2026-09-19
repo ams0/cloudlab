@@ -10,3 +10,4 @@ resources:
   - kubespaces-users.yaml
   - opencloud-client.yaml
   - outline-client.yaml
+  - warpgate-client.yaml

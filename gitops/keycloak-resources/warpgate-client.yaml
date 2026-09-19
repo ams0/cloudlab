@@ -1,0 +1,40 @@
+---
+# OIDC client for Warpgate. Confidential — Warpgate does the code exchange
+# server-side and holds a real client secret.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: warpgate
+  namespace: keycloak-operator
+spec:
+  clientId: warpgate
+  name: Warpgate
+  description: Warpgate bastion (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Same value the app reads; created by roles/flux from
+  # vault_warpgate_sso_client_secret.
+  secret: "$warpgate-sso:clientSecret"
+  webUrl: https://warpgate.vps.kubespaces.cloud
+  # Warpgate builds its return URL as "<prefix>warpgate/api/sso/return", where
+  # the prefix is either "@" or "_". Both are registered so login works
+  # whichever the running config resolves to.
+  redirectUris:
+    - https://warpgate.vps.kubespaces.cloud/@warpgate/api/sso/return
+    - https://warpgate.vps.kubespaces.cloud/_warpgate/api/sso/return
+  webOrigins:
+    - https://warpgate.vps.kubespaces.cloud
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins

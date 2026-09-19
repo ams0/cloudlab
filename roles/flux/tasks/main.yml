@@ -521,3 +521,37 @@
   when:
     - outline_redis_secret_check.rc != 0
     - vault_outline_redis_password | default('') | trim | length > 0
+
+- name: Create warpgate namespace if not exists
+  shell: kubectl create namespace warpgate --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if warpgate secrets exist
+  shell: |
+    kubectl -n warpgate get secret warpgate-secret && \
+    kubectl -n warpgate get secret warpgate-sso && \
+    kubectl -n keycloak-operator get secret warpgate-sso
+  register: warpgate_secret_check
+  failed_when: false
+  changed_when: false
+
+# warpgate-secret: initial admin password (consumed once by the setup Job) and
+# the key Warpgate uses to encrypt stored target credentials at rest.
+# warpgate-sso lives in two namespaces: the app reads it, and the KeycloakClient
+# CR reads the same value via $warpgate-sso:clientSecret.
+- name: Create warpgate secrets
+  shell: |
+    kubectl -n warpgate create secret generic warpgate-secret \
+      --from-literal=adminPassword={{ vault_warpgate_admin_password | quote }} \
+      --from-literal=encryptionKey={{ vault_warpgate_encryption_key | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n warpgate create secret generic warpgate-sso \
+      --from-literal=clientSecret={{ vault_warpgate_sso_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n keycloak-operator create secret generic warpgate-sso \
+      --from-literal=clientSecret={{ vault_warpgate_sso_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  no_log: true
+  when:
+    - warpgate_secret_check.rc != 0
+    - vault_warpgate_admin_password | default('') | trim | length > 0
