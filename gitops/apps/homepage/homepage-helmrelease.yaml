@@ -76,6 +76,9 @@ spec:
           Business:
             style: row
             columns: 3
+          Knowledge:
+            style: row
+            columns: 3
           Observability:
             style: row
             columns: 3
@@ -104,6 +107,11 @@ spec:
                 href: https://crm.vps.kubespaces.cloud
                 description: Open-source CRM
                 icon: twenty.png
+        - Knowledge:
+            - Outline:
+                href: https://outline.vps.kubespaces.cloud
+                description: Team knowledge base, SSO via Keycloak
+                icon: outline.png
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud
