@@ -1,0 +1,84 @@
+---
+# Redis for Outline's cache, websocket collaboration state and job queue.
+#
+# Deliberately NOT the chart's bundled Redis: that is a Bitnami subchart, and
+# since Bitnami moved its catalogue behind a subscription in 2025 the chart
+# points at bitnamilegacy/redis — a frozen mirror. Outline's Redis crashlooped
+# for days on the older chart for exactly this reason. Valkey is the
+# Redis-compatible fork, actively maintained and multi-arch.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: outline-valkey
+  namespace: outline
+  labels:
+    app: outline-valkey
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: outline-valkey
+  template:
+    metadata:
+      labels:
+        app: outline-valkey
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+      containers:
+        - name: valkey
+          image: valkey/valkey:8-alpine # renovate: datasource=docker depName=valkey/valkey
+          imagePullPolicy: IfNotPresent
+          # The outline chart refuses to render an external Redis without a
+          # password, so Valkey requires one. Cache and ephemeral websocket
+          # state only — no persistence, nothing durable to lose on restart.
+          command: ["sh", "-c"]
+          args:
+            - exec valkey-server --save "" --appendonly no --requirepass "$VALKEY_PASSWORD"
+          env:
+            - name: VALKEY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: outline-redis
+                  key: redis-password
+          ports:
+            - name: valkey
+              containerPort: 6379
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            tcpSocket:
+              port: valkey
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: valkey
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: outline-valkey
+  namespace: outline
+  labels:
+    app: outline-valkey
+spec:
+  type: ClusterIP
+  selector:
+    app: outline-valkey
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey

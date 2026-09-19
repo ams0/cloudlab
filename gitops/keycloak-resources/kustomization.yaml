@@ -9,3 +9,4 @@ resources:
   - kubespaces-realm.yaml
   - kubespaces-users.yaml
   - opencloud-client.yaml
+  - outline-client.yaml

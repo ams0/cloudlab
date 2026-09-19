@@ -29,9 +29,33 @@ Beautiful team wiki and knowledge base, serving as a self-hosted alternative to 
 
 Outline stores documents, collections, users, search indices, and revision history in PostgreSQL. Rich text documents with real-time collaboration, full-text search, and version tracking require a relational database.
 
-## Redis
+## Redis — why it is Valkey, not the chart's
 
-An in-chart Redis instance (standalone architecture, with persistence enabled) handles caching, real-time collaboration state via WebSockets, and background job processing such as search indexing and email delivery.
+The chart's Redis is a **Bitnami subchart**. Bitnami moved its catalogue behind
+a subscription in 2025, so chart 0.9.4 points at `bitnamilegacy/redis` with the
+comment *"temporary workaround because of bitnami's deprecation"* — a frozen
+mirror. This is what previously left Outline's Redis crashlooping for days.
+
+So `redis.enabled: false` and `externalRedis` points at the Valkey deployment in
+`outline-valkey.yaml` — the Redis-compatible fork, actively maintained and
+multi-arch. It holds cache, websocket collaboration state and the job queue;
+persistence is off because none of that is durable.
+
+The chart refuses to render an external Redis without a password, so Valkey runs
+with `requirepass` and both sides read `outline-redis`.
+
+## Authentication
+
+Outline has **no local accounts** — without an auth provider nobody can sign in
+at all. Configured for OIDC against the `kubespaces` Keycloak realm; the client
+is a `KeycloakClient` CR in `gitops/keycloak-resources/outline-client.yaml`,
+confidential, with the secret coming from the vault via `roles/flux`.
+
+## Versions
+
+Chart **0.9.4** pinned, image overridden to **1.10.1** (the chart ships 1.10.0).
+The chart version was previously unpinned, which is how this drifted onto a
+release whose Redis subchart no longer pulled. Keep it pinned.
 
 ## Storage
 

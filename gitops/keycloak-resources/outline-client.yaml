@@ -1,0 +1,37 @@
+---
+# OIDC client for Outline. Confidential (not public) — Outline runs the
+# authorization-code exchange server-side, so it holds a real client secret.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: outline
+  namespace: keycloak-operator
+spec:
+  clientId: outline
+  name: Outline
+  description: Outline knowledge base (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Reads the client secret from a Secret in this namespace, created by
+  # roles/flux from vault_outline_oidc_client_secret. The same value is placed
+  # in the outline namespace for the app to use.
+  secret: "$outline-oidc:clientSecret"
+  webUrl: https://outline.vps.kubespaces.cloud
+  redirectUris:
+    - https://outline.vps.kubespaces.cloud/auth/oidc.callback
+  webOrigins:
+    - https://outline.vps.kubespaces.cloud
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins

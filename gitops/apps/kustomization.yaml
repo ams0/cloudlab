@@ -33,7 +33,7 @@ resources:
 #  - omni           # rebuild: off
 #  - tailscale      # rebuild: off
 #  - alarik         # rebuild: off
-#  - outline        # rebuild: off
+  - outline
 #  - rustfs         # rebuild: off
 #  - backstage      # rebuild: off
 #  - atlantis       # rebuild: off

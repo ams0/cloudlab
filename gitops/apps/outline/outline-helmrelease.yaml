@@ -8,13 +8,16 @@ metadata:
     app: outline
 spec:
   interval: 10m
-  timeout: 5m
+  timeout: 10m
   targetNamespace: outline
   dependsOn:
     - name: outline-database
   chart:
     spec:
       chart: outline
+      # Pinned. This previously tracked the channel and moved on its own, which
+      # is how it ended up on a chart whose Redis subchart no longer pulled.
+      version: "0.9.4"
       sourceRef:
         kind: HelmRepository
         name: outline
@@ -28,40 +31,88 @@ spec:
     remediation:
       retries: 3
   values:
-    url: "https://outline.vps.kubespaces.cloud"
-    redis:
-      enabled: true
-      architecture: standalone
-      master:
-        persistence:
-          enabled: true
-    smtp:
-      host: "smtp.gmail.com"
-      port: 587
-      fromEmail: "outline@kubespaces.io"
-      replyEmail: "no-reply@kubespaces.io"
-      existingSecret:
-          name: "outline-smtp"
-          usernameKey: "username"
-          passwordKey: "password"
-      secure: false
-    fileStorage:
-      mode: "local"
+    # Chart 0.9.4 ships appVersion 1.10.0; 1.10.1 is the current release.
+    image:
+      tag: "1.10.1" # renovate: datasource=docker depName=outlinewiki/outline
 
-      local:
-        persistence:
-          enabled: true
-          existingClaim: "outline-pvc"
+    url: "https://outline.vps.kubespaces.cloud"
+
+    # Single node with an RWO volume: the old pod must release the claim before
+    # the replacement can bind it.
+    strategy:
+      type: Recreate
+
+    # ── Redis ────────────────────────────────────────────────────────────
+    # The in-chart Redis is a Bitnami subchart pointing at bitnamilegacy/redis
+    # (a frozen mirror since Bitnami went subscription-only). Use the Valkey
+    # deployment in outline-valkey.yaml instead.
+    redis:
+      enabled: false
+    externalRedis:
+      host: "outline-valkey.outline.svc.cluster.local"
+      port: 6379
+      # Created by roles/flux from vault_outline_redis_password; Valkey runs
+      # with the same value as requirepass.
+      existingSecret: "outline-redis"
+      passwordSecretKey: "redis-password"
+
+    # ── Database (CNPG) ──────────────────────────────────────────────────
     externalPostgresql:
       host: "outline-outline-database-cluster-rw"
       database: "outline"
       username: "outline"
       existingSecret: "outline-outline-database-cluster-app"
       passwordSecretKey: "password"
+
+    # ── Authentication ───────────────────────────────────────────────────
+    # Outline has no local accounts — without a provider nobody can sign in at
+    # all, which is why this app never came up before. OIDC against the
+    # kubespaces realm; the client itself is a KeycloakClient CR in
+    # gitops/keycloak-resources/.
+    auth:
+      oidc:
+        enabled: true
+        displayName: "Kubespaces"
+        clientId: "outline"
+        authUri: "https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/auth"
+        tokenUri: "https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/token"
+        userInfoUri: "https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/userinfo"
+        logoutUri: "https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/logout"
+        usernameClaim: preferred_username
+        scopes:
+          - openid
+          - profile
+          - email
+        existingSecret:
+          # Created by roles/flux from vault_outline_oidc_client_secret.
+          name: "outline-oidc"
+          clientSecretKey: "clientSecret"
+
+    # ── Mail ─────────────────────────────────────────────────────────────
+    # freedom.nl, the same mailbox Twenty and OpenCloud use. Port 587 is
+    # STARTTLS, so secure (implicit TLS) stays false.
+    smtp:
+      host: "smtp.freedom.nl"
+      port: 587
+      fromEmail: "alessandro@freedom.nl"
+      replyEmail: "alessandro@freedom.nl"
+      secure: false
+      existingSecret:
+        name: "outline-smtp"
+        usernameKey: "username"
+        passwordKey: "password"
+
+    fileStorage:
+      mode: "local"
+      local:
+        persistence:
+          enabled: true
+          existingClaim: "outline-pvc"
+
     resources:
       requests:
         cpu: 50m
-        memory: 256Mi
+        memory: 384Mi
       limits:
-        cpu: 1000m
-        memory: 1Gi
+        cpu: 1500m
+        memory: 1536Mi

@@ -459,3 +459,65 @@
   when:
     - twenty_ai_secret_check.rc != 0
     - vault_twenty_google_api_key | default('') | trim | length > 0
+
+# Outline needs the OIDC client secret in two places: the keycloak-operator
+# namespace (where the KeycloakClient CR reads it via $name:key) and the
+# outline namespace (where the app reads it). Same value, one vault key.
+- name: Create outline namespace if not exists
+  shell: kubectl create namespace outline --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if outline oidc secrets exist
+  shell: |
+    kubectl -n outline get secret outline-oidc && \
+    kubectl -n keycloak-operator get secret outline-oidc
+  register: outline_oidc_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create outline oidc secrets
+  shell: |
+    kubectl -n outline create secret generic outline-oidc \
+      --from-literal=clientSecret={{ vault_outline_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n keycloak-operator create secret generic outline-oidc \
+      --from-literal=clientSecret={{ vault_outline_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  no_log: true
+  when:
+    - outline_oidc_secret_check.rc != 0
+    - vault_outline_oidc_client_secret | default('') | trim | length > 0
+
+- name: Check if outline smtp secret exists
+  shell: kubectl -n outline get secret outline-smtp
+  register: outline_smtp_secret_check
+  failed_when: false
+  changed_when: false
+
+# Same freedom.nl mailbox as Twenty and OpenCloud.
+- name: Create outline smtp secret
+  shell: |
+    kubectl -n outline create secret generic outline-smtp \
+      --from-literal=username=alessandro@freedom.nl \
+      --from-literal=password={{ vault_twenty_smtp_password | quote }}
+  no_log: true
+  when:
+    - outline_smtp_secret_check.rc != 0
+    - vault_twenty_smtp_password | default('') | trim | length > 0
+
+# The outline chart refuses to render without a Redis password, so Valkey runs
+# with requirepass and both sides read the same secret.
+- name: Check if outline redis secret exists
+  shell: kubectl -n outline get secret outline-redis
+  register: outline_redis_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create outline redis secret
+  shell: |
+    kubectl -n outline create secret generic outline-redis \
+      --from-literal=redis-password={{ vault_outline_redis_password | quote }}
+  no_log: true
+  when:
+    - outline_redis_secret_check.rc != 0
+    - vault_outline_redis_password | default('') | trim | length > 0

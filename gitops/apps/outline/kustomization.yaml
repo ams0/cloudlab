@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - outline-pvc.yaml
   - outline-db-helmrelease.yaml
+  - outline-valkey.yaml
   - outline-helmrepo.yaml
   - outline-helmrelease.yaml
   - outline-httproute.yaml
