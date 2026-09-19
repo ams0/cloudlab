@@ -555,3 +555,27 @@
   when:
     - warpgate_secret_check.rc != 0
     - vault_warpgate_admin_password | default('') | trim | length > 0
+
+# Warpgate terminates TLS on its own listener — `certificate`/`key` are plain
+# paths in its config and there is no plaintext mode. Normally `unattended-setup`
+# writes a self-signed pair, but with overrides_config the config file already
+# exists when setup runs, so setup skips and no cert is ever produced. Generate
+# one here; the chart's init container copies it to /data/tls.*.pem.
+- name: Check if warpgate tls secret exists
+  shell: kubectl -n warpgate get secret warpgate-tls
+  register: warpgate_tls_check
+  failed_when: false
+  changed_when: false
+
+- name: Generate warpgate self-signed certificate
+  shell: |
+    set -e
+    D=$(mktemp -d)
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+      -keyout "$D/tls.key" -out "$D/tls.crt" \
+      -subj "/CN=warpgate.vps.kubespaces.cloud" \
+      -addext "subjectAltName=DNS:warpgate.vps.kubespaces.cloud,DNS:warpgate-warpgate.warpgate.svc.cluster.local"
+    kubectl -n warpgate create secret tls warpgate-tls \
+      --cert="$D/tls.crt" --key="$D/tls.key"
+    rm -rf "$D"
+  when: warpgate_tls_check.rc != 0

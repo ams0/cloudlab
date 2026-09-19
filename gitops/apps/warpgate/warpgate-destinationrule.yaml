@@ -1,0 +1,22 @@
+---
+# Warpgate always terminates TLS on its own listener, so port 8888 speaks HTTPS,
+# not plaintext. The HTTPRoute would otherwise send cleartext and get nothing
+# back. This tells Istio to originate TLS to the backend.
+#
+# insecureSkipVerify because the certificate is the self-signed pair generated
+# by roles/flux — the hop is pod-to-pod inside the cluster, and the real
+# public-facing certificate is the Let's Encrypt one Traefik serves.
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: warpgate
+  namespace: warpgate
+spec:
+  host: warpgate-warpgate.warpgate.svc.cluster.local
+  trafficPolicy:
+    portLevelSettings:
+      - port:
+          number: 8888
+        tls:
+          mode: SIMPLE
+          insecureSkipVerify: true

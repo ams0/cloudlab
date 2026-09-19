@@ -7,3 +7,4 @@ resources:
   - warpgate-db-helmrelease.yaml
   - warpgate-pvc.yaml
   - warpgate-helmrelease.yaml
+  - warpgate-destinationrule.yaml
