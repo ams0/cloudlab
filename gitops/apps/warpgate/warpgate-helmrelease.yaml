@@ -99,11 +99,17 @@ spec:
     config_env_var_replace: "WARPGATE_DB_PASSWORD WARPGATE_SSO_CLIENT_SECRET"
     overrides_config: |
       database_url: "postgres://warpgate:$WARPGATE_DB_PASSWORD@warpgate-warpgate-database-cluster-rw:5432/warpgate"
+      # TOP-LEVEL, not under http. construct_external_url() reads
+      # store.external_host; the http.external_host key is a different thing
+      # (it only appears in a DB query for target options). With it nested, any
+      # code path that builds a URL without an inbound request — the SSO start
+      # endpoint, the session cookie domain — fails with
+      # "no valid Host header found and `external_host` config option is not set".
+      external_host: warpgate.vps.kubespaces.cloud
       http:
         listen: "0.0.0.0:8888"
         certificate: /data/tls.certificate.pem
         key: /data/tls.key.pem
-        external_host: warpgate.vps.kubespaces.cloud
       sso_providers:
         - name: keycloak
           label: Kubespaces
