@@ -108,6 +108,11 @@ spec:
       external_host: warpgate.vps.kubespaces.cloud
       http:
         listen: "0.0.0.0:8888"
+        # The port users actually reach Warpgate on. Without it, external URLs
+        # fall back to the listen port and the OIDC redirect_uri comes out as
+        # https://host:8888/... — which Keycloak rejects, since the registered
+        # URI has no port. 443 is omitted from the rendered URL automatically.
+        external_port: 443
         certificate: /data/tls.certificate.pem
         key: /data/tls.key.pem
       sso_providers:
@@ -118,8 +123,9 @@ spec:
             client_id: warpgate
             client_secret: "$WARPGATE_SSO_CLIENT_SECRET"
             issuer_url: https://auth.vps.kubespaces.cloud/realms/kubespaces
+            # warpgate adds `openid` itself — listing it here too produced
+            # scope=openid+openid+profile+email on the authorize URL.
             scopes:
-              - openid
               - profile
               - email
 
