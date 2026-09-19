@@ -73,16 +73,18 @@ spec:
           Automation:
             style: row
             columns: 3
-          Business:
+          Knowledge:
             style: row
             columns: 3
-          Knowledge:
+          Business:
             style: row
             columns: 3
           Observability:
             style: row
             columns: 3
 
+      # Kept in step with what actually has a public route. Adding an app here
+      # without a Traefik router and an HTTPRoute just advertises a 502.
       services:
         - Platform:
             - Keycloak:
@@ -91,8 +93,13 @@ spec:
                 icon: keycloak.png
             - Traefik:
                 href: https://traefik.vps.kubespaces.cloud
-                description: Host-level reverse proxy and TLS termination
+                description: Host reverse proxy and TLS termination
                 icon: traefik.png
+            - Warpgate:
+                href: https://warpgate.vps.kubespaces.cloud
+                description: Bastion for SSH and HTTP targets, SSO via Keycloak
+                icon: warpgate.png
+
         - Automation:
             - n8n:
                 href: https://n8n.vps.kubespaces.cloud
@@ -102,16 +109,19 @@ spec:
                 href: https://renovate.vps.kubespaces.cloud
                 description: In-cluster dependency updates, CRD-scheduled
                 icon: renovate.png
-        - Business:
-            - Twenty:
-                href: https://crm.vps.kubespaces.cloud
-                description: Open-source CRM
-                icon: twenty.png
+
         - Knowledge:
             - Outline:
                 href: https://outline.vps.kubespaces.cloud
                 description: Team knowledge base, SSO via Keycloak
                 icon: outline.png
+
+        - Business:
+            - Twenty:
+                href: https://crm.vps.kubespaces.cloud
+                description: Open-source CRM
+                icon: twenty.png
+
         - Observability:
             - Uptime Kuma:
                 href: https://status.vps.kubespaces.cloud
@@ -123,6 +133,9 @@ spec:
             - Repository:
                 - abbr: GH
                   href: https://github.com/ams0/cloudlab
+            - Flux webhook:
+                - abbr: FX
+                  href: https://webhook.vps.kubespaces.cloud
 
       widgets:
         - resources:
@@ -133,6 +146,5 @@ spec:
             provider: duckduckgo
             target: _blank
 
-      # Chart mounts these; empty is fine but the keys must exist.
       docker: {}
       kubernetes: {}

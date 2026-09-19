@@ -50,9 +50,15 @@ spec:
       # CNPG owns the database. The password is substituted from the
       # environment so the DSN never appears in Git.
       databaseUrl: "postgres://warpgate:$WARPGATE_DB_PASSWORD@warpgate-warpgate-database-cluster-rw:5432/warpgate"
+      # The init container performs the $VAR substitution into warpgate.yaml
+      # using `printenv` under `set -e`, and it takes its environment from THIS
+      # map — not the main container's envFromSecret. Every variable listed in
+      # config_env_var_replace must therefore appear here too, or the init
+      # container exits 1 with no log output at all.
       envFromSecret:
         WARPGATE_ADMIN_PASSWORD: "warpgate-secret/adminPassword"
         WARPGATE_DB_PASSWORD: "warpgate-warpgate-database-cluster-app/password"
+        WARPGATE_SSO_CLIENT_SECRET: "warpgate-sso/clientSecret"
 
     service:
       type: ClusterIP
