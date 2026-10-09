@@ -69,8 +69,11 @@ cluster.** The controls that make that tolerable are upstream, not in the pod:
 
 - the relay enforces membership (`auth_required: true`) and the owner is its
   only human member
-- `BUZZ_ACP_RESPOND_TO_ALLOWLIST` pins the agent to the owner's pubkey, so even
-  a future invited member cannot drive it
+- the harness runs with `respond_to=owner-only` (its default), so only the
+  owner's pubkey can drive it -- an invited member could not command an agent
+  holding cluster-admin. `BUZZ_ACP_RESPOND_TO_ALLOWLIST` is intentionally unset,
+  because the harness ignores it unless `respond_to=allowlist`, and owner-only
+  is the stricter of the two
 
 Everything else stays hardened: `runAsNonRoot` with a fixed UID 1000,
 `allowPrivilegeEscalation: false`, all capabilities dropped, `RuntimeDefault`

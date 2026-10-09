@@ -95,11 +95,16 @@ spec:
             # inside a 4Gi limit on a shared single-node cluster.
             - name: BUZZ_ACP_AGENTS
               value: "2"
-            # Only the owner can drive it. Belt-and-braces with relay
-            # membership, so a future invited member cannot command an agent
-            # that holds cluster-admin.
-            - name: BUZZ_ACP_RESPOND_TO_ALLOWLIST
-              value: "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2"
+            # NOTE: BUZZ_ACP_RESPOND_TO_ALLOWLIST is deliberately NOT set. The
+            # harness ignores it unless respond_to is literally 'allowlist'
+            # ("--respond-to-allowlist is ignored when --respond-to is not
+            # 'allowlist'"), and the default respond_to=owner-only is already
+            # the stricter rule: only the owner's pubkey can drive this agent.
+            # Setting both would be dead config implying protection it is not
+            # providing. If other members are ever invited AND some of them
+            # should be able to command it, switch to:
+            #   BUZZ_ACP_RESPOND_TO=allowlist
+            #   BUZZ_ACP_RESPOND_TO_ALLOWLIST=<comma-separated pubkeys>
             - name: BUZZ_ACP_SYSTEM_PROMPT
               value: >-
                 You are a Buzz agent running inside the cloudlab Kubernetes
