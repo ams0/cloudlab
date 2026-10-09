@@ -6,4 +6,5 @@ resources:
   - buzz-ocirepository.yaml
   - buzz-db-helmrelease.yaml
   - buzz-silo.yaml
+  - buzz-valkey.yaml
   - buzz-helmrelease.yaml

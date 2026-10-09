@@ -27,7 +27,14 @@ spec:
   values:
     image:
       repository: ghcr.io/block/buzz
-      tag: "0.1.0"
+      # NOT the chart's appVersion (0.1.0). That image never runs its embedded
+      # sqlx migrations -- it connects to Postgres and goes straight to querying
+      # tables that were never created ("relation \"events\" does not exist"),
+      # logging no migration step at all, with BUZZ_AUTO_MIGRATE set either way.
+      # 0.2.1 logs "Database migrations complete" and creates all 54 tables
+      # against the same database. The chart is current at 0.1.11; only its
+      # appVersion lags the app.
+      tag: "0.2.1" # renovate: datasource=docker depName=block/buzz
 
     # The wss:// URL clients dial. Also derives mediaBaseUrl (https://<host>/media).
     relayUrl: wss://buzz.vps.kubespaces.cloud
@@ -54,6 +61,8 @@ spec:
     # optional in exactly this case.
     postgresql:
       enabled: false
+    # Bundled Redis stays off; buzz-valkey.yaml runs Valkey instead and
+    # REDIS_URL is supplied through the existing Secret.
     redis:
       enabled: false
     minio:

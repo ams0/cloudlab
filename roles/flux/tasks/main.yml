@@ -612,17 +612,25 @@
     - buzz_secret_check.rc != 0
     - vault_buzz_pg_password | default('') | trim | length > 0
 
+# The CNPG service name is doubled: Flux names a release <targetNamespace>-<name>
+# when targetNamespace is set, so HelmRelease buzz-database becomes release
+# buzz-buzz-database and the cnpg chart appends -cluster. Same shape as
+# warpgate-warpgate-database-cluster-rw. Not a typo.
 # The relay reads every secret from this one Secret (secrets.existingSecret).
-# REDIS_URL is deliberately absent: at replicaCount 1 the chart marks it optional
-# and buzz-pubsub only needs Redis to fan out across pods.
+# VALKEY_PASSWORD is read by buzz-valkey itself; REDIS_URL is the same password
+# in the form the relay dials. The chart calls REDIS_URL optional at
+# replicaCount 1, but the relay dials Redis regardless and retries forever if
+# nothing answers -- see gitops/apps/buzz/buzz-valkey.yaml.
 - name: Create buzz relay env secret
   shell: |
     kubectl -n buzz create secret generic buzz-relay-env \
-      --from-literal=DATABASE_URL={{ ('postgres://buzz:' ~ vault_buzz_pg_password ~ '@buzz-database-cluster-rw.buzz.svc.cluster.local:5432/buzz') | quote }} \
+      --from-literal=DATABASE_URL={{ ('postgres://buzz:' ~ vault_buzz_pg_password ~ '@buzz-buzz-database-cluster-rw.buzz.svc.cluster.local:5432/buzz') | quote }} \
       --from-literal=BUZZ_RELAY_PRIVATE_KEY={{ vault_buzz_relay_private_key | quote }} \
       --from-literal=BUZZ_GIT_HOOK_HMAC_SECRET={{ vault_buzz_git_hook_hmac_secret | quote }} \
       --from-literal=BUZZ_S3_ACCESS_KEY={{ vault_buzz_s3_access_key | quote }} \
       --from-literal=BUZZ_S3_SECRET_KEY={{ vault_buzz_s3_secret_key | quote }} \
+      --from-literal=VALKEY_PASSWORD={{ vault_buzz_redis_password | quote }} \
+      --from-literal=REDIS_URL={{ ('redis://:' ~ vault_buzz_redis_password ~ '@buzz-valkey.buzz.svc.cluster.local:6379') | quote }} \
       --dry-run=client -o yaml | kubectl apply -f -
   no_log: true
   when:

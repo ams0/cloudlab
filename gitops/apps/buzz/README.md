@@ -6,7 +6,7 @@ is `buzz-relay`, a Rust binary.
 
 - URL: `https://buzz.vps.kubespaces.cloud` (clients dial `wss://buzz.vps.kubespaces.cloud`)
 - Chart: `oci://ghcr.io/block/buzz/charts/buzz` **0.1.11** (appVersion 0.1.0)
-- Image: `ghcr.io/block/buzz:0.1.0` — multi-arch, arm64 ✓
+- Image: `ghcr.io/block/buzz:0.2.1` — multi-arch, arm64 ✓
 
 No Helm chart had to be written: Buzz publishes an official one as an OCI
 artifact. The source repo is ~600MB, so the chart is pulled as an OCIRepository
@@ -34,9 +34,9 @@ Two **distinct** keypairs are in play:
 
 | Need | How it is met |
 |------|---------------|
-| PostgreSQL | CNPG `Cluster` (`buzz-database-cluster`), per repo convention |
+| PostgreSQL | CNPG `Cluster` (`buzz-buzz-database-cluster`), per repo convention |
 | Object storage | `buzz-silo` Deployment in-namespace (see below) |
-| Redis | **Not deployed.** Only needed to fan out buzz-pubsub across pods; the chart marks `REDIS_URL` optional at `replicaCount: 1`. |
+| Redis | Valkey (`buzz-valkey`). The chart calls `REDIS_URL` optional at `replicaCount: 1`, but the relay dials Redis regardless and retries forever if nothing answers. |
 
 ### Object storage is mandatory
 
@@ -60,6 +60,30 @@ HelmRelease supplies an equivalent via `extraInitContainers`. It runs
 safe to re-run on every restart. A `Job` was deliberately avoided: its spec is
 immutable, so any later edit would wedge Flux.
 
+## Image version: 0.2.1, not the chart's appVersion
+
+The chart's appVersion is `0.1.0`, and **that image never runs its embedded sqlx
+migrations**. It connects to Postgres and goes straight to querying tables that
+were never created:
+
+```
+INFO  Postgres connected
+ERROR Failed to ensure partitions: relation "events" does not exist
+Error: Failed to bootstrap relay owner: relation "relay_members" does not exist
+```
+
+No migration step is logged at all, with `BUZZ_AUTO_MIGRATE` set to either
+`true` or `1`. The relay user has full DDL rights on the database (verified
+directly), so this is not a permissions problem. `0.2.1` logs
+`Database migrations complete` and creates all 54 tables against that same
+database, so the image tag is pinned to `0.2.1`. Published app releases are
+0.1.0, 0.1.1, 0.2.0 and 0.2.1; the chart is current at 0.1.11 and only its
+appVersion lags.
+
+Note also that `migrate.preUpgradeJob` is advertised in values but is
+**reserved, not implemented** — no template consumes it — so startup migration
+is the only mechanism the chart offers.
+
 ## The DATABASE_URL exception
 
 Every other app here reads discrete `host`/`user`/`password` keys from the
@@ -81,6 +105,8 @@ Secret the relay reads, via `secrets.existingSecret`:
 | `BUZZ_GIT_HOOK_HMAC_SECRET` | `vault_buzz_git_hook_hmac_secret` |
 | `BUZZ_S3_ACCESS_KEY` | `vault_buzz_s3_access_key` |
 | `BUZZ_S3_SECRET_KEY` | `vault_buzz_s3_secret_key` |
+| `REDIS_URL` | composed from `vault_buzz_redis_password` |
+| `VALKEY_PASSWORD` | `vault_buzz_redis_password` (read by `buzz-valkey`) |
 
 The same S3 keys are what `buzz-silo` serves as its root credentials.
 
