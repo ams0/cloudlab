@@ -1,0 +1,105 @@
+---
+# S3-compatible object storage for Buzz media and git objects.
+#
+# Buzz treats object storage as a hard dependency: the relay runs a startup S3
+# conformance probe and exits if the bucket is unreachable, and git refs/objects
+# live in the bucket rather than on disk. The chart ships a bundled MinIO
+# "quickstart", but it hard-fails when combined with `secrets.existingSecret`
+# (it insists on autogenerating credentials into a chart-managed Secret, which
+# the chart itself documents as "not GitOps-safe"). Since the vault-backed
+# Secret is the convention here, the same topology is reproduced explicitly with
+# credentials we control.
+#
+# pgsty/silo is a maintained MinIO fork with public arm64 images — the exact
+# images and digests the upstream chart pins for its own quickstart.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: buzz-silo-pvc
+  namespace: buzz
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buzz-silo
+  namespace: buzz
+  labels:
+    app: buzz
+    app.kubernetes.io/component: silo
+spec:
+  replicas: 1
+  # Single node + ReadWriteOnce: a surging replica could never bind the volume.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: buzz
+      app.kubernetes.io/component: silo
+  template:
+    metadata:
+      labels:
+        app: buzz
+        app.kubernetes.io/component: silo
+    spec:
+      containers:
+        - name: silo
+          image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46
+          args: ["server", "/data", "--console-address", ":9001"]
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: buzz-relay-env
+                  key: BUZZ_S3_ACCESS_KEY
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: buzz-relay-env
+                  key: BUZZ_S3_SECRET_KEY
+          ports:
+            - { name: api, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: api }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /minio/health/live, port: api }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: buzz-silo-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buzz-silo
+  namespace: buzz
+  labels:
+    app: buzz
+    app.kubernetes.io/component: silo
+spec:
+  selector:
+    app: buzz
+    app.kubernetes.io/component: silo
+  ports:
+    - { name: api, port: 9000, targetPort: api }
+    - { name: console, port: 9001, targetPort: console }

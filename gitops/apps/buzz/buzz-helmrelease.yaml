@@ -1,0 +1,148 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: buzz
+  namespace: flux-system
+  labels:
+    app: buzz
+spec:
+  interval: 10m
+  timeout: 10m
+  targetNamespace: buzz
+  chartRef:
+    kind: OCIRepository
+    name: buzz-ocirepo
+    namespace: flux-system
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  dependsOn:
+    - name: buzz-database
+      namespace: flux-system
+  values:
+    image:
+      repository: ghcr.io/block/buzz
+      tag: "0.1.0"
+
+    # The wss:// URL clients dial. Also derives mediaBaseUrl (https://<host>/media).
+    relayUrl: wss://buzz.vps.kubespaces.cloud
+
+    # Nostr pubkey (x-only, 64-char lowercase hex) of the relay operator. Buzz
+    # authenticates with Nostr keypairs, not OIDC, so this is the admin identity
+    # rather than a Keycloak user. Required while relay.requireRelayMembership
+    # is true, which keeps the relay closed to everyone but invited members.
+    ownerPubkey: "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2"
+
+    # Vault-backed Secret (roles/flux) carrying DATABASE_URL,
+    # BUZZ_RELAY_PRIVATE_KEY, BUZZ_GIT_HOOK_HMAC_SECRET and the S3 credentials.
+    # The chart's own docs name this the GitOps path; the alternative generates
+    # secrets chart-side, which does not survive reconciliation cleanly.
+    secrets:
+      existingSecret: buzz-relay-env
+
+    replicaCount: 1
+
+    # Bundled eval-only subcharts, all replaced by cluster-native equivalents:
+    # Postgres by CNPG, object storage by the silo Deployment alongside this
+    # release. Redis is genuinely unnecessary at replicaCount 1 — buzz-pubsub
+    # only needs it to fan out across pods, and the chart marks REDIS_URL
+    # optional in exactly this case.
+    postgresql:
+      enabled: false
+    redis:
+      enabled: false
+    minio:
+      enabled: false
+
+    s3:
+      endpoint: http://buzz-silo.buzz.svc.cluster.local:9000
+      bucket: buzz-media
+      region: us-east-1
+      addressingStyle: path
+
+    # The relay's S3 conformance probe is startup-fatal and does NOT create the
+    # bucket, so a relay pod can never reach readiness before the bucket exists.
+    # The chart's own wait-for-bucket init container only renders for the bundled
+    # MinIO, so supply an equivalent. `mc mb --ignore-existing` is idempotent,
+    # which both creates the bucket on first boot and makes this safe to re-run
+    # on every restart — and avoids a Job, whose immutable spec would wedge Flux
+    # on any later edit.
+    extraInitContainers:
+      - name: ensure-bucket
+        image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: [ALL]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        env:
+          - name: S3_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: buzz-relay-env
+                key: BUZZ_S3_ACCESS_KEY
+          - name: S3_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: buzz-relay-env
+                key: BUZZ_S3_SECRET_KEY
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -e
+            # mc wants a writable config dir; the root filesystem may be read-only.
+            export MC_CONFIG_DIR=/tmp/.mc
+            until mc alias set local http://buzz-silo.buzz.svc.cluster.local:9000 \
+                  "$S3_ACCESS_KEY" "$S3_SECRET_KEY" >/dev/null 2>&1; do
+              echo "waiting for object storage..."; sleep 2
+            done
+            mc mb --ignore-existing local/buzz-media
+            mc anonymous set none local/buzz-media
+            echo "bucket buzz-media ready"
+
+    # Ephemeral git working space only — refs and objects live in the bucket and
+    # repo-name uniqueness lives in Postgres, so nothing here is authoritative.
+    persistence:
+      git:
+        enabled: true
+        storageClass: local-path
+        accessMode: ReadWriteOnce
+        size: 5Gi
+
+    # Trimmed from chart defaults (5GiB cache / 7Gi emptyDir) to suit one
+    # shared ARM64 node rather than a dedicated fleet.
+    git:
+      packCacheMaxBytes: 1610612736  # 1.5 GiB
+      packCacheVolumeSize: 2Gi
+
+    relay:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 512Mi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+
+    # Routed through the shared Istio gateway, as every other app here is.
+    ingress:
+      enabled: false
+    httproute:
+      enabled: true
+      parentRefs:
+        - name: gateway
+          namespace: istio-system
+          sectionName: http
+      hostnames:
+        - "buzz.vps.kubespaces.cloud"

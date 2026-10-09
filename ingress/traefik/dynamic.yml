@@ -62,6 +62,16 @@ http:
       tls:
         certResolver: letsencrypt
 
+    # Buzz Nostr relay. Clients connect over wss:// to the same host, which
+    # Traefik proxies as an ordinary HTTP upgrade — no extra config needed, but
+    # it does mean the connection is long-lived, unlike the other routes here.
+    buzz:
+      rule: "Host(`buzz.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
     # Renovate Operator UI. No auth provider is configured in the chart, and the
     # operator treats every request as admin in that case, so it does not go out
     # unauthenticated. Drop the middleware once OIDC via Keycloak is wired up.

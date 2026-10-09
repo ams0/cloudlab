@@ -1,0 +1,17 @@
+---
+# Buzz publishes an official Helm chart as an OCI artifact. The source repo is
+# ~600MB (Rust workspace + web client), so a GitRepository source is a non-starter
+# here — the chart artifact is a few KB.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: buzz-ocirepo
+  namespace: flux-system
+spec:
+  interval: 10m
+  layerSelector:
+    mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+    operation: copy
+  url: oci://ghcr.io/block/buzz/charts/buzz
+  ref:
+    tag: "0.1.11"

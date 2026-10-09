@@ -35,6 +35,7 @@ resources:
 #  - alarik         # rebuild: off
   - outline
   - warpgate
+  - buzz
 #  - rustfs         # rebuild: off
 #  - backstage      # rebuild: off
 #  - atlantis       # rebuild: off

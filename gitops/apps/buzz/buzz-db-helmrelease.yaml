@@ -1,0 +1,53 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: buzz-database
+  namespace: flux-system
+  labels:
+    app: buzz
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: buzz
+  chart:
+    spec:
+      chart: cluster
+      version: ">=0.0.10"
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+        namespace: flux-system
+      interval: 1m
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  dependsOn:
+    - name: cnpg
+      namespace: flux-system
+  values:
+    type: postgresql
+    mode: standalone
+    version:
+      postgresql: "18"
+    cluster:
+      instances: 1
+      initdb:
+        database: buzz
+        encoding: UTF8
+        localeCType: C
+        localeCollate: C
+        owner: buzz
+        # Unlike every other app here, Buzz wants one composed DATABASE_URL
+        # rather than discrete host/user/password keys. CNPG normally invents the
+        # owner password itself, which Ansible could not then embed in that URL,
+        # so the credentials are pre-created in `buzz-pg-app` (roles/flux) and
+        # CNPG is pointed at them. Both sides then agree by construction.
+        secret:
+          name: buzz-pg-app
+    backups:
+      enabled: false

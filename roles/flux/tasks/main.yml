@@ -579,3 +579,52 @@
       --cert="$D/tls.crt" --key="$D/tls.key"
     rm -rf "$D"
   when: warpgate_tls_check.rc != 0
+
+# ── Buzz ────────────────────────────────────────────────────────────────────
+# Buzz wants ONE composed DATABASE_URL rather than the discrete host/user/password
+# keys every other app here reads from the CNPG-generated secret. CNPG normally
+# invents the owner password itself, which Ansible could not then embed in that
+# URL, so the owner credentials are created here and the CNPG Cluster is pointed
+# at them via cluster.initdb.secret.name — both sides agree by construction.
+- name: Create buzz namespace if not exists
+  shell: kubectl create namespace buzz --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if buzz secrets exist
+  shell: |
+    kubectl -n buzz get secret buzz-pg-app && \
+    kubectl -n buzz get secret buzz-relay-env
+  register: buzz_secret_check
+  failed_when: false
+  changed_when: false
+
+# CNPG requires the bootstrap credentials as type kubernetes.io/basic-auth with
+# `username` and `password` keys.
+- name: Create buzz postgres owner secret
+  shell: |
+    kubectl -n buzz create secret generic buzz-pg-app \
+      --type=kubernetes.io/basic-auth \
+      --from-literal=username=buzz \
+      --from-literal=password={{ vault_buzz_pg_password | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  no_log: true
+  when:
+    - buzz_secret_check.rc != 0
+    - vault_buzz_pg_password | default('') | trim | length > 0
+
+# The relay reads every secret from this one Secret (secrets.existingSecret).
+# REDIS_URL is deliberately absent: at replicaCount 1 the chart marks it optional
+# and buzz-pubsub only needs Redis to fan out across pods.
+- name: Create buzz relay env secret
+  shell: |
+    kubectl -n buzz create secret generic buzz-relay-env \
+      --from-literal=DATABASE_URL={{ ('postgres://buzz:' ~ vault_buzz_pg_password ~ '@buzz-database-cluster-rw.buzz.svc.cluster.local:5432/buzz') | quote }} \
+      --from-literal=BUZZ_RELAY_PRIVATE_KEY={{ vault_buzz_relay_private_key | quote }} \
+      --from-literal=BUZZ_GIT_HOOK_HMAC_SECRET={{ vault_buzz_git_hook_hmac_secret | quote }} \
+      --from-literal=BUZZ_S3_ACCESS_KEY={{ vault_buzz_s3_access_key | quote }} \
+      --from-literal=BUZZ_S3_SECRET_KEY={{ vault_buzz_s3_secret_key | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  no_log: true
+  when:
+    - buzz_secret_check.rc != 0
+    - vault_buzz_pg_password | default('') | trim | length > 0
