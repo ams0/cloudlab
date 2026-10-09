@@ -84,6 +84,26 @@ Note also that `migrate.preUpgradeJob` is advertised in values but is
 **reserved, not implemented** — no template consumes it — so startup migration
 is the only mechanism the chart offers.
 
+## Web UI: not served at `/` in 0.2.1
+
+The relay bundles a React client at `/srv/buzz/web` (an 874KB bundle), and the
+chart describes "a single relay binary serving WebSocket + REST + web UI". On
+0.2.1 the static assets serve correctly (`/assets/*` → 200) but the SPA entry
+point does not: `/` returns the NIP-11 relay info document for every request,
+including a full browser navigation (`Sec-Fetch-Mode: navigate`,
+`Accept: text/html`), and `/index.html`, `/app` and any other path return a bare
+404. Verified directly against the pod with the correct `Host`, so this is the
+relay's own routing, not Traefik or Istio.
+
+The community row for this host exists and is bound correctly, but its
+`signing_key` column is empty, which is the likely reason the UI is not yet
+bound — community provisioning is a first-run action performed by the owner from
+a Buzz client, not something the chart does.
+
+This does not affect the relay protocol, which is what Buzz clients actually
+use: `wss://buzz.vps.kubespaces.cloud` completes a WebSocket upgrade
+(101 Switching Protocols) and NIP-11 advertises `auth_required: true`.
+
 ## The DATABASE_URL exception
 
 Every other app here reads discrete `host`/`user`/`password` keys from the

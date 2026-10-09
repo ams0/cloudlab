@@ -111,6 +111,10 @@ spec:
                 icon: renovate.png
 
         - Knowledge:
+            - Buzz:
+                href: https://buzz.vps.kubespaces.cloud
+                description: Nostr team chat, huddles and git hosting
+                icon: mdi-forum
             - Outline:
                 href: https://outline.vps.kubespaces.cloud
                 description: Team knowledge base, SSO via Keycloak
