@@ -41,7 +41,7 @@ jobs:
       # built so the image is usable from a laptop for debugging.
       - name: Build and push multi-arch image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: gitops/apps/buzz-agent/image
           platforms: linux/amd64,linux/arm64
