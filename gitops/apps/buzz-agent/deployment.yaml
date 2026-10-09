@@ -1,0 +1,135 @@
+---
+# A Buzz agent: the `buzz-acp` harness (PID 1) spawning Claude Code over ACP,
+# connected to the relay under its own Nostr identity.
+#
+# DEVIATION -- Deployment, where the spec mandates a bare Pod.
+# docs/remote-agents.md forbids controllers for agents because
+# "controller-grade restart machinery (`Restart=always`-shaped) would resurrect
+# what `!shutdown` and auto-stop terminate", violating its
+# intentional-termination-is-final invariant. That is accepted here, knowingly:
+#   * `!shutdown` from chat will NOT be final -- the ReplicaSet recreates the
+#     pod. Stopping this agent is a GitOps action: scale to 0, or comment the
+#     app out of gitops/apps/kustomization.yaml.
+#   * In exchange it survives what the spec concedes a bare Pod cannot --
+#     "`restartPolicy` is kubelet-level and cannot survive *node-level* loss --
+#     a drain or API-initiated eviction deletes a bare pod outright". On a
+#     single-node cluster that gets rebooted, that failure mode is the common
+#     one, and an always-on teammate is the whole point.
+# Inactivity auto-stop is therefore disabled (EXIT_AFTER_INACTIVITY=0) rather
+# than left at its 7200s default, so the agent does not reap itself into a
+# restart loop.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buzz-agent-claude
+  namespace: buzz-agent
+  labels:
+    app: buzz-agent-claude
+spec:
+  replicas: 1
+  # At-most-one-live-instance: two pods sharing one Nostr identity would both
+  # publish presence and race on every event.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: buzz-agent-claude
+  template:
+    metadata:
+      labels:
+        app: buzz-agent-claude
+    spec:
+      serviceAccountName: buzz-agent
+      # The explicit opt-in described in rbac.yaml. The spec's default is false.
+      automountServiceAccountToken: true
+      # Sized by the spec: "requests 1 cpu / 2Gi, limits 2 cpu / 4Gi [...]
+      # `cargo build` in an agent workspace makes 500m/1Gi requests unrealistic".
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        # Numeric, not the image's `agent` name: with a non-numeric USER the
+        # kubelet cannot prove the user is non-root and refuses to start the
+        # container. 1000:1000 is what `agent` resolves to in buzz-sprig.
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          # Pinned by digest, not tag: the spec requires it for anything
+          # that runs with an nsec, and rejects :latest outright.
+          # Rebuilt by .github/workflows/buzz-agent-image.yml.
+          image: ghcr.io/ams0/buzz-agent-claude@sha256:ca0383fd7b6c847f2a9fa45835e16e5d08633a628323873da1c3ec400ec21503
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            # readOnlyRootFilesystem is intentionally absent: the spec notes it
+            # "is *not* required in v1 -- the sprig toolchain writes outside the
+            # workspace mount".
+          env:
+            # ── Identity ────────────────────────────────────────────────────
+            - name: BUZZ_RELAY_URL
+              value: "wss://buzz.vps.kubespaces.cloud"
+            # The owner's pubkey, which the spec accepts in place of a NIP-OA
+            # auth tag: BUZZ_AUTH_TAG is "omitted when null; then
+            # launch.owner_pubkey -> BUZZ_ACP_AGENT_OWNER is REQUIRED". Using
+            # this avoids having to mint an attestation the desktop normally
+            # produces.
+            - name: BUZZ_ACP_AGENT_OWNER
+              value: "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2"
+
+            # ── Harness → agent wiring ──────────────────────────────────────
+            # Resolved against the image's own PATH, never a host path.
+            - name: BUZZ_ACP_AGENT_COMMAND
+              value: "claude-agent-acp"
+            # Gives the agent its shell and file-editing tools.
+            - name: BUZZ_ACP_MCP_COMMAND
+              value: "buzz-dev-mcp"
+            # 0 = indefinite lifetime; see the Deployment deviation above.
+            - name: BUZZ_ACP_EXIT_AFTER_INACTIVITY
+              value: "0"
+            # Concurrent turns. Kept low: each one is a Claude Code session
+            # inside a 4Gi limit on a shared single-node cluster.
+            - name: BUZZ_ACP_AGENTS
+              value: "2"
+            # Only the owner can drive it. Belt-and-braces with relay
+            # membership, so a future invited member cannot command an agent
+            # that holds cluster-admin.
+            - name: BUZZ_ACP_RESPOND_TO_ALLOWLIST
+              value: "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2"
+            - name: BUZZ_ACP_SYSTEM_PROMPT
+              value: >-
+                You are a Buzz agent running inside the cloudlab Kubernetes
+                cluster (single ARM64 node, k0s, Istio ambient, Flux CD).
+                You hold cluster-admin via a mounted ServiceAccount token and
+                can run kubectl. This cluster is managed by GitOps: anything
+                under gitops/ is reconciled by Flux from
+                github.com/ams0/cloudlab, so changes applied directly with
+                kubectl will be reverted. Prefer changing Git over changing the
+                cluster, and say so when you do. Be concise.
+            # BUZZ_ACP_NO_PRESENCE is deliberately never set: on a remote agent
+            # "presence is the only signal" the owner has that it is alive.
+          envFrom:
+            # BUZZ_PRIVATE_KEY, NOSTR_PRIVATE_KEY, CLAUDE_CODE_OAUTH_TOKEN
+            # (created by roles/flux from ansible-vault)
+            - secretRef:
+                name: buzz-agent-env
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: workspace
+              mountPath: /home/agent
+      volumes:
+        # "Workspace: emptyDir. Checkouts and scratch die with the pod; agent
+        # memory is relay-persisted (NIP-AE) and unaffected."
+        - name: workspace
+          emptyDir:
+            sizeLimit: 8Gi

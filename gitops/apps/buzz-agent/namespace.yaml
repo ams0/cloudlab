@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: buzz-agent
+  labels:
+    name: buzz-agent

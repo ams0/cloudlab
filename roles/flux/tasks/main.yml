@@ -636,3 +636,36 @@
   when:
     - buzz_secret_check.rc != 0
     - vault_buzz_pg_password | default('') | trim | length > 0
+
+# ── Buzz agent ("claude") ───────────────────────────────────────────────────
+# The agent is a separate Nostr identity from both the relay and the human
+# owner. BUZZ_PRIVATE_KEY and NOSTR_PRIVATE_KEY carry the same nsec: the
+# harness reads the former, the git credential/signing helpers read the latter
+# (docs/remote-agents.md, payload -> environment mapping).
+#
+# CLAUDE_CODE_OAUTH_TOKEN is a `claude setup-token` OAuth token, so the agent
+# bills against the Claude subscription rather than a metered API key. It is
+# long-lived (~1 year) but has NO auto-refresh -- when it expires the agent
+# stops being able to think, so treat it as an annual rotation.
+- name: Create buzz-agent namespace if not exists
+  shell: kubectl create namespace buzz-agent --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Check if buzz agent secret exists
+  shell: kubectl -n buzz-agent get secret buzz-agent-env
+  register: buzz_agent_secret_check
+  failed_when: false
+  changed_when: false
+
+- name: Create buzz agent secret
+  shell: |
+    kubectl -n buzz-agent create secret generic buzz-agent-env \
+      --from-literal=BUZZ_PRIVATE_KEY={{ vault_buzz_agent_nsec | quote }} \
+      --from-literal=NOSTR_PRIVATE_KEY={{ vault_buzz_agent_nsec | quote }} \
+      --from-literal=CLAUDE_CODE_OAUTH_TOKEN={{ vault_buzz_claude_oauth_token | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  no_log: true
+  when:
+    - buzz_agent_secret_check.rc != 0
+    - vault_buzz_agent_nsec | default('') | trim | length > 0
+    - vault_buzz_claude_oauth_token | default('') | trim | length > 0

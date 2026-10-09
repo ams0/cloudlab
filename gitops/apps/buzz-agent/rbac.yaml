@@ -1,0 +1,34 @@
+---
+# Cluster credentials for the agent.
+#
+# This deliberately departs from the remote-agents spec, which makes
+# `automountServiceAccountToken: false` a normative hardening default and calls
+# a mounted ServiceAccount token "an API-stealable credential the agent never
+# needs". The same section carves out the exception taken here: "API-token
+# access, if ever wanted, is a separate explicit opt-in, not a side effect of
+# naming an SA." This is that explicit opt-in, chosen so the agent can act on
+# the cluster rather than only talk about it.
+#
+# The practical consequence, stated plainly: anyone who can get this agent to
+# run a command can change this cluster. The control that makes that
+# acceptable is upstream, on the relay -- membership is enforced
+# (auth_required), the owner is the only member, and
+# BUZZ_ACP_RESPOND_TO_ALLOWLIST pins the agent to the owner's pubkey.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: buzz-agent
+  namespace: buzz-agent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: buzz-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: buzz-agent
+    namespace: buzz-agent
