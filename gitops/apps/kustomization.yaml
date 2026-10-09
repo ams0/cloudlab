@@ -36,13 +36,7 @@ resources:
   - outline
   - warpgate
   - buzz
-# Enable once BOTH prerequisites are met, otherwise the pod cannot start and
-# the flux-system Kustomization stalls on its health check:
-#   1. ghcr.io/ams0/buzz-agent-claude is made public (package settings UI),
-#      or an imagePullSecret is added -- the repo uses neither today.
-#   2. vault_buzz_claude_oauth_token is set and roles/flux has created
-#      the buzz-agent-env secret.
-#  - buzz-agent
+  - buzz-agent
 #  - rustfs         # rebuild: off
 #  - backstage      # rebuild: off
 #  - atlantis       # rebuild: off
