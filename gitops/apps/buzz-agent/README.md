@@ -99,6 +99,43 @@ A build-time check fails the image if `claude-agent-acp`, `buzz-acp` or
 `BUZZ_ACP_AGENT_COMMAND` against `PATH`, so a missing binary would otherwise
 show up only as a silently dead agent.
 
+### Cluster tooling
+
+The agent holds cluster-admin, so it also carries the CLIs to use it:
+
+| Tool | Version | Source |
+|------|---------|--------|
+| `kubectl` | v1.36.4 | `dl.k8s.io` — matches the k0s server exactly |
+| `helm` | v3.22.0 | `get.helm.sh` — 3.x, to match helm-controller v1.4.5's Helm 3 release storage |
+| `flux` | v2.7.5 | GitHub releases — same pin as `roles/flux/defaults/main.yml`, so CLI and host cannot drift |
+| `yq` | v4.54.1 | GitHub releases |
+| `jq` | Alpine 3.22 `main` | `apk`, so the signed index covers it |
+
+Every upstream tarball is verified against a per-arch SHA-256 recorded in the
+Dockerfile. An unpinned `curl | tar` into a cluster-admin image would reopen
+exactly the supply-chain hole the base-image digest pin exists to close.
+Alpine's own `kubectl` is not used because it trails a 1.36 server by more than
+the ±1 kubectl skew policy allows.
+
+`KUBECONFIG=/etc/buzz-agent/kubeconfig` is baked in, because **`kubectl` does
+not fall back to in-cluster config the way client-go does** — without a
+kubeconfig it would try `localhost:8080`. That file points at the projected
+ServiceAccount and uses `tokenFile:` rather than `token:`, so kubectl re-reads
+the token as the kubelet rotates it instead of pinning one that expires. `helm`
+and `flux` honour `KUBECONFIG` too, so all three work with no setup.
+
+It sits in `/etc/buzz-agent/` and not `~/.kube/` on purpose: the Deployment
+mounts an emptyDir over `/home/agent`, which would mask anything baked into the
+home directory.
+
+The default namespace in that context is `default`; the agent is cluster-wide,
+so most real work wants `-n <ns>` or `-A`.
+
+The build *executes* each tool (`kubectl version --client`, `helm version`,
+`flux --version`, …) rather than just locating it. buildx runs the arm64 stage
+under QEMU, so that is a genuine arm64/musl check and would catch a glibc-only
+binary before it ever reaches the node.
+
 ## Secrets
 
 `buzz-agent-env` (namespace `buzz-agent`, created by `roles/flux`):
