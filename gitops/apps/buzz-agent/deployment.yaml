@@ -60,7 +60,7 @@ spec:
           # Pinned by digest, not tag: the spec requires it for anything
           # that runs with an nsec, and rejects :latest outright.
           # Rebuilt by .github/workflows/buzz-agent-image.yml.
-          image: ghcr.io/ams0/buzz-agent-claude@sha256:ca0383fd7b6c847f2a9fa45835e16e5d08633a628323873da1c3ec400ec21503
+          image: ghcr.io/ams0/buzz-agent-claude@sha256:0500ad28e44b3ae339b611140046f3c1771df33337348c7e01f1a00c3e421762
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
