@@ -80,6 +80,20 @@ spec:
             # produces.
             - name: BUZZ_ACP_AGENT_OWNER
               value: "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2"
+            # NIP-OA ownership attestation: a BIP-340 Schnorr signature by the
+            # owner's key over SHA256("nostr:agent-auth:" || <agent pubkey> || ":"
+            # || <conditions>), with empty (unconstrained) conditions.
+            #
+            # Not secret -- it is published in the agent's kind:0 profile, which
+            # is where it does its real work: authenticated owned-agent discovery
+            # requires "the latest agent kind 0 profile [to have] a valid
+            # envelope and exactly one valid NIP-OA auth tag". Without it the
+            # agent is merely a relay-only key and never appears in the
+            # desktop's Agents list. The companion owner-authored kind 30177
+            # policy event seeds that discovery and is published to the relay
+            # (not reproducible from this manifest).
+            - name: BUZZ_AUTH_TAG
+              value: '["auth", "1eda26e5d17812d1dcf2e9b84fb542f2b0b12ec7b5b36907c85bad287b479af2", "", "0c04d01a0d54fff68fe38ed157307e63fe1784c682a577c8588a263e830dcfa4143c56e2f589393e52d0f82c1e73c53d743b8d8427f9a5f49eb2f696a86c5506"]'
 
             # ── Harness → agent wiring ──────────────────────────────────────
             # Resolved against the image's own PATH, never a host path.
