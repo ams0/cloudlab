@@ -17,13 +17,13 @@ resources:
   - n8n
   - renovate-operator
   - twenty
+  - actual
 #  - opencloud     # disabled — manifests kept, re-enable by uncommenting
 
 #  - stakater       # rebuild: off
 #  - garage         # rebuild: off
 #  - forgejo        # rebuild: off
 #  - dashy          # rebuild: off
-#  - actual         # rebuild: off
 #  - openclaw       # rebuild: off
 #  - authentik      # rebuild: off
 #  - openwebui      # rebuild: off

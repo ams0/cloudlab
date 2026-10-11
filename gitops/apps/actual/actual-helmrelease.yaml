@@ -13,6 +13,9 @@ spec:
   chart:
     spec:
       chart: actualbudget
+      # Pinned rather than floating: on a single node an unattended chart bump
+      # can change the rollout strategy underneath a SQLite app (see below).
+      version: "1.9.5"
       sourceRef:
         kind: HelmRepository
         name: actual
@@ -27,12 +30,20 @@ spec:
       retries: 3
   values:
     image:
-      tag: "26.6.0"
+      tag: "26.10.0" # renovate: datasource=docker depName=actualbudget/actual-server
     ingress:
       enabled: false
     persistence:
       enabled: true
       existingClaim: actual-pvc
+    # The chart defaults to maxUnavailable=0 / maxSurge=100%, which on an
+    # upgrade starts the new pod before retiring the old one. Both would mount
+    # the same RWO claim on this single node and run actual-server against the
+    # same SQLite file concurrently -- a corruption risk, not just the usual
+    # single-node surge stall. Recreate takes the old pod down first; the
+    # seconds of downtime are the cheaper trade for a personal budget app.
+    strategy:
+      type: Recreate
     resources:
       requests:
         cpu: 10m
