@@ -1,0 +1,91 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opengym
+  namespace: opengym
+  labels:
+    app: opengym
+spec:
+  replicas: 1
+  # The API stores everything as JSON files on an RWO volume: two API
+  # processes must never write them at once, so no rolling surge.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opengym
+  template:
+    metadata:
+      labels:
+        app: opengym
+    spec:
+      containers:
+        - name: api
+          # Keep api and web on the same release.
+          image: ghcr.io/duartesantos8/opengym-api:1.4.1 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-api
+          env:
+            - name: PORT
+              value: "3000"
+            - name: DATA_DIR
+              value: /data
+            # Passkeys are bound to this host and require HTTPS (TLS is
+            # terminated by the host Traefik).
+            - name: RP_ID
+              value: gym.vps.kubespaces.cloud
+            - name: ORIGIN
+              value: https://gym.vps.kubespaces.cloud
+            # The first profile created on the empty instance becomes admin.
+            - name: FIRST_USER_ADMIN
+              value: "1"
+          ports:
+            - containerPort: 3000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+          volumeMounts:
+            - name: opengym-data
+              mountPath: /data
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+        - name: web
+          image: ghcr.io/duartesantos8/opengym-web:1.4.1 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-web
+          env:
+            # nginx runs as uid 101 and cannot bind <1024 under k0s.
+            - name: NGINX_PORT
+              value: "8080"
+            - name: BACKEND
+              value: 127.0.0.1
+            - name: PORT
+              value: "3000"
+          ports:
+            - containerPort: 8080
+              name: web
+          readinessProbe:
+            httpGet:
+              path: /
+              port: web
+          livenessProbe:
+            httpGet:
+              path: /
+              port: web
+            initialDelaySeconds: 30
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: opengym-data
+          persistentVolumeClaim:
+            claimName: opengym-pvc

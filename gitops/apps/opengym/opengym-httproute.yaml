@@ -1,0 +1,21 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: opengym
+  namespace: opengym
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: istio-system
+      sectionName: http
+  hostnames:
+    - "gym.vps.kubespaces.cloud"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: opengym
+          port: 80

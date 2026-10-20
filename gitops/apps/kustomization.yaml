@@ -18,6 +18,7 @@ resources:
   - renovate-operator
   - twenty
   - actual
+  - opengym
 #  - opencloud     # disabled — manifests kept, re-enable by uncommenting
 
 #  - stakater       # rebuild: off

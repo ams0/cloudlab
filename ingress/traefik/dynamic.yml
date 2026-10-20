@@ -275,6 +275,13 @@ http:
       tls:
         certResolver: letsencrypt
 
+    gym:
+      rule: "Host(`gym.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
     nginx:
       rule: "Host(`nginx.vps.kubespaces.cloud`)"
       entryPoints: [websecure]
