@@ -92,3 +92,11 @@ velero_s3_secret_key: "{{ vault_velero_s3_secret_key }}"
 # certificates OpenBao signs per session. Public — safe in Git. Refresh with:
 #   curl -s https://vault.vps.kubespaces.cloud/v1/ssh/public_key
 warpgate_ssh_ca_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGkwynraGZ2wHuRfH3E2ZnFVCG8XYBndN6OuLOS9nfEk"
+
+# Unix accounts reachable through the Warpgate target "cloudlab" (empty target
+# username → Warpgate login name = unix account = certificate principal).
+# Each name must ALSO be a Warpgate user and be listed in the OpenBao role's
+# allowed_users (ssh/roles/warpgate), or OpenBao refuses to sign.
+warpgate_users:
+  - name: alessandro
+    sudo: true

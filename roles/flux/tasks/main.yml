@@ -575,6 +575,19 @@
   no_log: true
   when: vault_openbao_unseal_key | default('') | trim | length > 0
 
+# Client secret for the "openbao" KeycloakClient (gitops/keycloak-resources/
+# openbao-client.yaml reads it as $openbao-oidc:clientSecret). OpenBao holds the
+# same value in its own auth/oidc/config — set by hand, see the OpenBao README.
+- name: Create openbao OIDC client secret
+  shell: |
+    kubectl -n keycloak-operator create secret generic openbao-oidc \
+      --from-literal=clientSecret={{ vault_openbao_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  register: openbao_oidc_secret
+  changed_when: "'configured' in openbao_oidc_secret.stdout or 'created' in openbao_oidc_secret.stdout"
+  no_log: true
+  when: vault_openbao_oidc_client_secret | default('') | trim | length > 0
+
 # Warpgate terminates TLS on its own listener — `certificate`/`key` are plain
 # paths in its config and there is no plaintext mode. Normally `unattended-setup`
 # writes a self-signed pair, but with overrides_config the config file already

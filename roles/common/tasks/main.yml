@@ -157,6 +157,33 @@
   when: warpgate_ssh_ca_public_key | default('') | length > 0
   notify: Reload sshd
 
+- name: Create Warpgate login accounts
+  # One unix account per Warpgate user. The Warpgate target "cloudlab" has an
+  # empty username, so Warpgate logs in as the Warpgate username and OpenBao
+  # signs a certificate for exactly that principal. No authorized_keys — the
+  # OpenBao-signed certificate is the only way in.
+  user:
+    name: "{{ item.name }}"
+    shell: /bin/bash
+    create_home: yes
+    password: "!"
+    update_password: on_create
+  loop: "{{ warpgate_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Passwordless sudo for Warpgate accounts that need it
+  copy:
+    dest: "/etc/sudoers.d/90-warpgate-{{ item.name }}"
+    content: "{{ item.name }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: visudo -cf %s
+  loop: "{{ warpgate_users | selectattr('sudo', 'defined') | selectattr('sudo') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
 - name: Ensure ufw is disabled
   systemd:
     name: ufw

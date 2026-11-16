@@ -1,0 +1,40 @@
+---
+# OIDC client for OpenBao (vault.vps.kubespaces.cloud). Confidential — OpenBao
+# does the code exchange server-side. Who may log in and with which policy is
+# decided on the OpenBao side (auth/oidc/role/default, bound on email).
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: openbao
+  namespace: keycloak-operator
+spec:
+  clientId: openbao
+  name: OpenBao
+  description: OpenBao UI/CLI login (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Same value OpenBao holds in auth/oidc/config; created by roles/flux from
+  # vault_openbao_oidc_client_secret.
+  secret: "$openbao-oidc:clientSecret"
+  webUrl: https://vault.vps.kubespaces.cloud
+  redirectUris:
+    # Web UI (auth mount "oidc")
+    - https://vault.vps.kubespaces.cloud/ui/vault/auth/oidc/oidc/callback
+    # `bao login -method=oidc` listens locally on 8250
+    - http://localhost:8250/oidc/callback
+  webOrigins:
+    - https://vault.vps.kubespaces.cloud
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins
