@@ -20,6 +20,12 @@ spec:
   lastName: Vozza
   enabled: true
   emailVerified: true
+  # The realm default role (offline_access, uma_authorization, and the account
+  # client's view-profile/manage-account). The operator syncs roles to exactly
+  # this list, so without it the user has none, and the account console at
+  # /realms/kubespaces/account/ fails with "Server responded with an invalid status".
+  roles:
+    - default-roles-kubespaces
   # Created by roles/flux from vault_opencloud_user_password.
   passwordSecret:
     name: opencloud-user
