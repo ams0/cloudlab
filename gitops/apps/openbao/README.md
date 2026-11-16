@@ -68,7 +68,7 @@ bao write ssh/roles/warpgate - <<'JSON'
   "key_type": "ca",
   "allow_user_certificates": true,
   "allow_user_key_ids": true,
-  "allowed_users": "root,deploy,ubuntu",
+  "allowed_users": "root,deploy,ubuntu,alessandro",
   "default_extensions": {"permit-pty": ""}
 }
 JSON
@@ -91,6 +91,43 @@ bao write auth/kubernetes/role/warpgate \
 bao read -field=public_key ssh/config/ca
 ```
 
+## Login with Keycloak (OIDC)
+
+Humans log in with the kubespaces realm instead of the root token: UI →
+method **OIDC** → Sign in, or `bao login -method=oidc` (opens a browser,
+callback on `localhost:8250`). The Keycloak client is
+`gitops/keycloak-resources/openbao-client.yaml`; its secret is
+`vault_openbao_oidc_client_secret` (→ Secret `keycloak-operator/openbao-oidc`
+via `roles/flux`). OpenBao keeps its own copy in `auth/oidc/config`.
+
+```bash
+bao policy write admin - <<'HCL'
+path "*" { capabilities = ["create","read","update","patch","delete","list","sudo"] }
+HCL
+bao auth enable oidc
+bao write auth/oidc/config \
+  oidc_discovery_url=https://auth.vps.kubespaces.cloud/realms/kubespaces \
+  oidc_client_id=openbao oidc_client_secret=<vault_openbao_oidc_client_secret> \
+  default_role=default
+bao write auth/oidc/role/default - <<'JSON'
+{
+  "role_type": "oidc", "user_claim": "email",
+  "oidc_scopes": ["openid","email","profile"],
+  "allowed_redirect_uris": [
+    "https://vault.vps.kubespaces.cloud/ui/vault/auth/oidc/oidc/callback",
+    "http://localhost:8250/oidc/callback"],
+  "bound_claims": {"email": ["alessandro@fromvolt.com"]},
+  "claim_mappings": {"preferred_username": "username", "email": "email"},
+  "token_policies": ["admin"], "token_ttl": "8h", "token_max_ttl": "24h"
+}
+JSON
+```
+
+Access is an allow-list of emails in `bound_claims` (the realm has
+self-registration off, so emails are admin-set). Add a person by appending
+their email. Keep the recovery keys: `bao operator generate-root` is the
+break-glass path if Keycloak is down.
+
 Writing `ssh/roles/warpgate` replaces the whole role — always resend every
 field, not just the one you are changing.
 
@@ -103,14 +140,24 @@ All of the above is applied. Warpgate side (lives in Warpgate's database, not Gi
 | Secret backend | `openbao` → `http://openbao-openbao.openbao.svc:8200`, Kubernetes auth, role `warpgate`, allowed path `ssh/sign/warpgate` |
 | Target | `cloudlab-host` → `ubuntu@10.20.10.147:22`, auth *Certificate* (backend `openbao`, mount `ssh`, role `warpgate`) |
 | Known host | the host's ed25519 key, verified against `/etc/ssh/ssh_host_ed25519_key.pub` |
-| Role | `infra` → `cloudlab-host`, granted to `admin` and `alessandro` |
+| Target | `cloudlab` → `10.20.10.147:22` with an **empty username**: Warpgate logs in as the Warpgate username, and OpenBao signs for that principal. Same certificate auth |
+| Role | `infra` → `cloudlab-host` + `cloudlab`, granted to `admin` and `alessandro` |
 | User | `alessandro` — SSO credential (provider `keycloak`, kubespaces realm email), roles `infra` + admin role `warpgate:admin` |
 
-Connect: `ssh -p 2222 admin:cloudlab-host@warpgate.vps.kubespaces.cloud`
+Connect:
+- as yourself: `ssh -p 2222 alessandro:cloudlab@warpgate.vps.kubespaces.cloud` → unix user `alessandro`
+- break-glass: `ssh -p 2222 admin:cloudlab-host@warpgate.vps.kubespaces.cloud` → `ubuntu`
 
 sshd on the target logs each login as
 `ED25519-CERT … ID warpgate:<user>:<session>`, and Warpgate audits each
 signing as `SshCertificateIssued`.
+
+**Adding a person** to the `cloudlab` target: (1) Warpgate user + SSO
+credential (their Keycloak email) + role `infra`; (2) an entry in
+`warpgate_users` in `group_vars/oracle_hosts/main.yml` (`sudo: true` for
+NOPASSWD sudo), applied with `--tags common`; (3) their username appended to
+`allowed_users` in `ssh/roles/warpgate`. Miss (3) and OpenBao refuses to sign;
+miss (2) and sshd rejects the certificate.
 
 New targets need: the principal (login user) in the role's `allowed_users`,
 the CA in `TrustedUserCAKeys`, and the host key trusted in Warpgate (an
