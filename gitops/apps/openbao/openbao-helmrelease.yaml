@@ -1,0 +1,133 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: openbao
+  namespace: flux-system
+  labels:
+    app: openbao
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: openbao
+  chart:
+    spec:
+      chart: openbao
+      # Pinned, per the single-node convention — never a floating range.
+      version: "0.30.7"
+      sourceRef:
+        kind: HelmRepository
+        name: openbao
+        namespace: flux-system
+      interval: 5m0s
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Only the server. The agent injector and CSI provider are for apps that
+    # pull secrets out of OpenBao; nothing here does that yet.
+    injector:
+      enabled: false
+    csi:
+      enabled: false
+
+    server:
+      # Release and chart are both "openbao", so the chart collapses the name
+      # to plain `openbao` (Service openbao.openbao.svc:8200) — Warpgate's
+      # secret-backend address depends on that, so keep the release name.
+
+      # Default probe is `bao status`, which fails until the server is
+      # initialized — Helm's install wait would then time out on a fresh
+      # deploy, before anyone can run `bao operator init`. Uninitialized
+      # reports 204 (Ready); sealed still reports 503 (not Ready), which is the
+      # signal that matters once the static seal is in place.
+      readinessProbe:
+        enabled: true
+        path: "/v1/sys/health?standbyok=true&uninitcode=204"
+
+      # Kubernetes auth needs the token-reviewer ClusterRoleBinding. Warpgate
+      # authenticates with its pod service account this way, so no OpenBao
+      # credential is ever stored in Warpgate.
+      authDelegator:
+        enabled: true
+
+      # Chart default is OnDelete: config changes only land after the pod is
+      # deleted by hand. RollingUpdate on a 1-replica StatefulSet deletes the
+      # old pod first, so there is no surge to stall on the single node.
+      updateStrategyType: RollingUpdate
+
+      dataStorage:
+        enabled: true
+        size: 2Gi
+        storageClass: local-path
+        # Pre-created as openbao-pvc.yaml (named data-openbao-0) so it is
+        # Flux-owned and survives a Helm uninstall.
+
+      # The static-seal key (64 hex chars = 32 bytes, AES-256). Created by
+      # roles/flux from vault_openbao_unseal_key; never in Git.
+      extraSecretEnvironmentVars:
+        - envName: BAO_STATIC_SEAL_KEY
+          secretName: openbao-unseal
+          secretKey: key
+
+      standalone:
+        enabled: true
+        config: |
+          ui = true
+
+          # TLS ends at Traefik (public) and ztunnel mTLS covers in-cluster
+          # hops (ambient mesh), so the listener itself is plaintext.
+          listener "tcp" {
+            tls_disable     = 1
+            address         = "[::]:8200"
+            cluster_address = "[::]:8201"
+          }
+
+          storage "pebbledb" {
+            path = "/openbao/data/pebbledb"
+          }
+
+          # Auto-unseal from a key in a Kubernetes Secret. Without it every pod
+          # restart (reboot, 6-hourly Ansible run that bounces k0s, chart
+          # upgrade) leaves OpenBao sealed and Warpgate unable to sign SSH
+          # certificates until someone unseals by hand. Trade-off: anyone with
+          # read on the openbao-unseal Secret can decrypt the storage.
+          # Rotate by moving the old key to previous_key/previous_key_id and
+          # putting the new one here with a NEW current_key_id.
+          seal "static" {
+            current_key_id = "20261116-1"
+            current_key    = "env://BAO_STATIC_SEAL_KEY"
+          }
+
+      # Also creates the `openbao` Service on 8200 used below.
+      service:
+        enabled: true
+
+      # The chart emits a Gateway API HTTPRoute natively (the warpgate pattern)
+      # so there is no separate openbao-httproute.yaml.
+      ingress:
+        enabled: false
+      gateway:
+        httpRoute:
+          enabled: true
+          hosts:
+            - vault.vps.kubespaces.cloud
+          parentRefs:
+            - name: gateway
+              namespace: istio-system
+              sectionName: http
+
+      resources:
+        requests:
+          cpu: 20m
+          memory: 96Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+
+    ui:
+      enabled: false   # the HTTPRoute targets the main Service; no extra UI Service

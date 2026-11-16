@@ -1,0 +1,18 @@
+---
+# The chart only supports a StatefulSet volumeClaimTemplate for data, so this
+# PVC is pre-created with the exact name the template generates
+# (<template>-<statefulset>-<ordinal> = data-openbao-0). The StatefulSet adopts
+# it, and because Flux owns it rather than Helm it survives an uninstall.
+# Deleting it deletes every secret and the SSH CA signing key.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-openbao-0
+  namespace: openbao
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

@@ -556,6 +556,25 @@
     - warpgate_secret_check.rc != 0
     - vault_warpgate_admin_password | default('') | trim | length > 0
 
+# OpenBao static-seal key: the server reads it at startup to auto-unseal, so
+# a reboot doesn't leave Warpgate's SSH CA unusable until someone unseals by
+# hand. Applied unconditionally (idempotent) so a vault change propagates —
+# but rotating it needs the previous_key dance in openbao-helmrelease.yaml
+# first, or OpenBao can no longer decrypt its storage.
+- name: Create openbao namespace if not exists
+  shell: kubectl create namespace openbao --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Create openbao unseal secret
+  shell: |
+    kubectl -n openbao create secret generic openbao-unseal \
+      --from-literal=key={{ vault_openbao_unseal_key | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  register: openbao_unseal_secret
+  changed_when: "'configured' in openbao_unseal_secret.stdout or 'created' in openbao_unseal_secret.stdout"
+  no_log: true
+  when: vault_openbao_unseal_key | default('') | trim | length > 0
+
 # Warpgate terminates TLS on its own listener — `certificate`/`key` are plain
 # paths in its config and there is no plaintext mode. Normally `unattended-setup`
 # writes a self-signed pair, but with overrides_config the config file already
