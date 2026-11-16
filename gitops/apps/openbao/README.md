@@ -103,7 +103,8 @@ All of the above is applied. Warpgate side (lives in Warpgate's database, not Gi
 | Secret backend | `openbao` → `http://openbao-openbao.openbao.svc:8200`, Kubernetes auth, role `warpgate`, allowed path `ssh/sign/warpgate` |
 | Target | `cloudlab-host` → `ubuntu@10.20.10.147:22`, auth *Certificate* (backend `openbao`, mount `ssh`, role `warpgate`) |
 | Known host | the host's ed25519 key, verified against `/etc/ssh/ssh_host_ed25519_key.pub` |
-| Role | `infra` → `cloudlab-host`, granted to `admin` |
+| Role | `infra` → `cloudlab-host`, granted to `admin` and `alessandro` |
+| User | `alessandro` — SSO credential (provider `keycloak`, kubespaces realm email), roles `infra` + admin role `warpgate:admin` |
 
 Connect: `ssh -p 2222 admin:cloudlab-host@warpgate.vps.kubespaces.cloud`
 
