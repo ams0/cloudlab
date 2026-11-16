@@ -116,7 +116,7 @@ bao write auth/oidc/role/default - <<'JSON'
   "allowed_redirect_uris": [
     "https://vault.vps.kubespaces.cloud/ui/vault/auth/oidc/oidc/callback",
     "http://localhost:8250/oidc/callback"],
-  "bound_claims": {"email": ["alessandro@fromvolt.com"]},
+  "bound_claims": {"email": ["alessandro@kubespaces.io"]},
   "claim_mappings": {"preferred_username": "username", "email": "email"},
   "token_policies": ["admin"], "token_ttl": "8h", "token_max_ttl": "24h"
 }

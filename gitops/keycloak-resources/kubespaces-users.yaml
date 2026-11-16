@@ -15,7 +15,7 @@ spec:
     name: kubespaces
     kind: KeycloakRealm
   username: alessandro
-  email: alessandro@fromvolt.com
+  email: alessandro@kubespaces.io
   firstName: Alessandro
   lastName: Vozza
   enabled: true
