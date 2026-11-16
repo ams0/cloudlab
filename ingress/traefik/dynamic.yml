@@ -63,7 +63,7 @@ http:
         certResolver: letsencrypt
 
     # OpenBao — Warpgate's SSH CA. Warpgate itself talks to it in-cluster
-    # (openbao.openbao.svc:8200); this route is for the UI and the bao CLI.
+    # (openbao-openbao.openbao.svc:8200); this route is for the UI and the bao CLI.
     vault:
       rule: "Host(`vault.vps.kubespaces.cloud`)"
       entryPoints: [websecure]

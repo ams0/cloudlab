@@ -36,9 +36,9 @@ spec:
       enabled: false
 
     server:
-      # Release and chart are both "openbao", so the chart collapses the name
-      # to plain `openbao` (Service openbao.openbao.svc:8200) — Warpgate's
-      # secret-backend address depends on that, so keep the release name.
+      # Flux names the release <targetNamespace>-<name> = openbao-openbao, so
+      # the Service is openbao-openbao.openbao.svc:8200 — Warpgate's
+      # secret-backend address depends on it.
 
       # Default probe is `bao status`, which fails until the server is
       # initialized — Helm's install wait would then time out on a fresh
@@ -64,7 +64,7 @@ spec:
         enabled: true
         size: 2Gi
         storageClass: local-path
-        # Pre-created as openbao-pvc.yaml (named data-openbao-0) so it is
+        # Pre-created as openbao-pvc.yaml (named data-openbao-openbao-0) so it is
         # Flux-owned and survives a Helm uninstall.
 
       # The static-seal key (64 hex chars = 32 bytes, AES-256). Created by

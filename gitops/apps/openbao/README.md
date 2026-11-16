@@ -7,7 +7,7 @@ sign a 5-minute user certificate per session, and target hosts trust the CA via
 See <https://warpgate.null.page/targets/ssh/#ssh-certificates-signed-by-vault-openbao>.
 
 UI/API: `https://vault.vps.kubespaces.cloud`
-In-cluster: `http://openbao.openbao.svc:8200`
+In-cluster: `http://openbao-openbao.openbao.svc:8200`
 
 Replaces the never-initialized HashiCorp Vault app in `gitops/apps/vault/`.
 
@@ -15,7 +15,7 @@ Replaces the never-initialized HashiCorp Vault app in `gitops/apps/vault/`.
 
 - `namespace.yaml`
 - `openbao-helmrepo.yaml` — `https://openbao.github.io/openbao-helm`
-- `openbao-pvc.yaml` — 2Gi local-path, named `data-openbao-0` so the
+- `openbao-pvc.yaml` — 2Gi local-path, named `data-openbao-openbao-0` so the
   StatefulSet's volumeClaimTemplate adopts it (Flux-owned → survives uninstall)
 - `openbao-helmrelease.yaml` — chart `0.30.7` (OpenBao v2.7.2), standalone,
   pebbledb storage; the chart emits the HTTPRoute itself
@@ -48,8 +48,8 @@ With a static seal, `init` returns **recovery keys** (not unseal keys) plus the
 root token. Store both outside the cluster.
 
 ```bash
-kubectl -n openbao exec -ti openbao-0 -- bao operator init -recovery-shares=1 -recovery-threshold=1
-kubectl -n openbao exec -ti openbao-0 -- bao status   # Sealed: false
+kubectl -n openbao exec -ti openbao-openbao-0 -- bao operator init -recovery-shares=1 -recovery-threshold=1
+kubectl -n openbao exec -ti openbao-openbao-0 -- bao status   # Sealed: false
 ```
 
 ## Warpgate SSH CA setup
@@ -93,7 +93,7 @@ bao read -field=public_key ssh/config/ca   # → /etc/ssh/warpgate_ca.pub
 ```
 
 Then in Warpgate (**requires v0.30+**; currently pinned at v0.29.0):
-`Config → Secret backends` → address `http://openbao.openbao.svc:8200`,
+`Config → Secret backends` → address `http://openbao-openbao.openbao.svc:8200`,
 Kubernetes auth, role `warpgate`, allowed prefix `ssh/sign/warpgate`. On the SSH
 target choose "Certificate signed by a secret backend's SSH CA", mount `ssh`,
 role `warpgate`.
