@@ -395,3 +395,26 @@ http:
       loadBalancer:
         servers:
           - url: "h2c://host.docker.internal:30963"
+# Raw TCP routes. SSH carries no SNI, so HostSNI(`*`) — the ssh entrypoint is
+# dedicated to Warpgate and nothing else may share it.
+tcp:
+  routers:
+    warpgate-ssh:
+      rule: "HostSNI(`*`)"
+      entryPoints: [ssh]
+      service: warpgate-ssh
+
+  services:
+    warpgate-ssh:
+      loadBalancer:
+        serversTransport: proxy-protocol-v2
+        servers:
+          # NodePort from gitops/apps/warpgate/warpgate-ssh-service.yaml
+          - address: "host.docker.internal:30222"
+
+  serversTransports:
+    # Warpgate has ssh.proxy_protocol enabled and rejects connections without
+    # the header — keep these two in sync.
+    proxy-protocol-v2:
+      proxyProtocol:
+        version: 2

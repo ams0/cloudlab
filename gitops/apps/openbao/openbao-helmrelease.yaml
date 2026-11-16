@@ -79,8 +79,9 @@ spec:
         config: |
           ui = true
 
-          # TLS ends at Traefik (public) and ztunnel mTLS covers in-cluster
-          # hops (ambient mesh), so the listener itself is plaintext.
+          # TLS ends at Traefik for public traffic. The in-cluster hop from
+          # Warpgate is plaintext pod-to-pod on the single node (neither
+          # namespace is enrolled in the ambient mesh).
           listener "tcp" {
             tls_disable     = 1
             address         = "[::]:8200"

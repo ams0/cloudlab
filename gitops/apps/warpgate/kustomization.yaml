@@ -8,3 +8,4 @@ resources:
   - warpgate-pvc.yaml
   - warpgate-helmrelease.yaml
   - warpgate-destinationrule.yaml
+  - warpgate-ssh-service.yaml

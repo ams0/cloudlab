@@ -26,6 +26,10 @@ entryPoints:
       tls:
         certResolver: letsencrypt
 
+  # Raw TCP for the Warpgate SSH bastion — see the tcp: section of dynamic.yml.
+  ssh:
+    address: ":2222"
+
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"

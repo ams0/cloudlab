@@ -221,6 +221,31 @@ resource "oci_core_security_list" "this" {
     }
   }
 
+  # Warpgate SSH bastion — public by design: Warpgate does its own auth
+  # (password/SSO/keys) and every session is recorded. Host :2222 -> Traefik
+  # TCP entrypoint -> Warpgate NodePort.
+  ingress_security_rules {
+    protocol    = "6"
+    source      = "0.0.0.0/0"
+    description = "Warpgate SSH"
+
+    tcp_options {
+      min = 2222
+      max = 2222
+    }
+  }
+
+  ingress_security_rules {
+    protocol    = "6"
+    source      = "::/0"
+    description = "Warpgate SSH over IPv6"
+
+    tcp_options {
+      min = 2222
+      max = 2222
+    }
+  }
+
   # Allow port 8000
   ingress_security_rules {
     protocol    = "6"

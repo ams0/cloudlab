@@ -14,7 +14,7 @@ spec:
   ref:
     # Pinned to a release tag, not a branch — the chart is versioned 0.1.0 and
     # never bumped, so the tag is the only real version signal.
-    tag: v0.29.0
+    tag: v0.30.4
   ignore: |
     /*
     !/helm/

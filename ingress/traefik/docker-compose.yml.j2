@@ -10,6 +10,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Warpgate SSH bastion (TCP entrypoint `ssh`, router in dynamic.yml)
+      - "2222:2222"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:

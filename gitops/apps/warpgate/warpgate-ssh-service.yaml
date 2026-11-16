@@ -1,0 +1,22 @@
+---
+# Warpgate's SSH listener on a pinned NodePort. The host-level Traefik owns
+# public :2222 (TCP entrypoint `ssh`, see ingress/traefik/) and forwards here
+# with a PROXY v2 header — so don't hit 30222 directly, Warpgate will reject a
+# connection that lacks the header. Neither the iptables rules nor the OCI
+# security list open 30222; only Traefik on the host reaches it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: warpgate-ssh
+  namespace: warpgate
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: warpgate
+    app.kubernetes.io/instance: warpgate-warpgate
+  ports:
+    - name: ssh
+      port: 2222
+      targetPort: ssh
+      nodePort: 30222
+      protocol: TCP

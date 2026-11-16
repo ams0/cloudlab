@@ -35,19 +35,15 @@ spec:
     # writes one (the config file already exists, so it skips).
     tls_cert_secret: warpgate-tls
 
-    # ── HTTP only, for now ───────────────────────────────────────────────
-    # Warpgate is a bastion and also speaks SSH, MySQL and Postgres, but all
-    # three are raw TCP and this cluster only has HTTP ingress today
-    # (Traefik :443 -> Istio gateway NodePort -> HTTPRoute). Those ports are
-    # switched off rather than exposed on a service nothing can reach.
-    # Turning SSH on later means a TCP listener on the Gateway plus a TCPRoute
-    # (the experimental CRDs are already installed), a host firewall rule and
-    # a matching OCI security-list rule.
+    # ── HTTP + SSH ───────────────────────────────────────────────────────
+    # SSH reaches the pod via host :2222 -> Traefik TCP entrypoint (PROXY v2)
+    # -> NodePort 30222 (warpgate-ssh-service.yaml). MySQL/Postgres stay off.
+    # Since chart 0.2.0 (Warpgate 0.30) setup always runs as init containers;
+    # the old `type: job` value is ignored and has been dropped.
     setup:
       enabled: true
-      type: job
       http: 8888
-      ssh: 0
+      ssh: 2222
       mysql: 0
       pgsql: 0
       kubernetes: 0
@@ -55,11 +51,10 @@ spec:
       # CNPG owns the database. The password is substituted from the
       # environment so the DSN never appears in Git.
       databaseUrl: "postgres://warpgate:$WARPGATE_DB_PASSWORD@warpgate-warpgate-database-cluster-rw:5432/warpgate"
-      # The init container performs the $VAR substitution into warpgate.yaml
-      # using `printenv` under `set -e`, and it takes its environment from THIS
-      # map — not the main container's envFromSecret. Every variable listed in
-      # config_env_var_replace must therefore appear here too, or the init
-      # container exits 1 with no log output at all.
+      # The install-files init container performs the $VAR substitution into
+      # warpgate.yaml, and it takes its environment from THIS map — not the
+      # main container's envFromSecret. Every variable listed in
+      # config_env_var_replace must therefore appear here too.
       envFromSecret:
         WARPGATE_ADMIN_PASSWORD: "warpgate-secret/adminPassword"
         WARPGATE_DB_PASSWORD: "warpgate-warpgate-database-cluster-app/password"
@@ -67,6 +62,8 @@ spec:
 
     service:
       type: ClusterIP
+      # SSH is served by the separate NodePort Service (warpgate-ssh-service.yaml)
+      # so its nodePort can be pinned for Traefik; the chart Service stays HTTP.
       ports:
         http: 8888
         ssh: 0
@@ -115,6 +112,15 @@ spec:
         external_port: 443
         certificate: /data/tls.certificate.pem
         key: /data/tls.key.pem
+      ssh:
+        enable: true
+        listen: "0.0.0.0:2222"
+        # Traefik prepends a PROXY v2 header so session logs show the real
+        # client IP instead of the Traefik container's. Only Traefik connects
+        # to this port, so every connection carries the header.
+        proxy_protocol: true
+        # What users dial; shown in the UI's connection instructions.
+        external_port: 2222
       sso_providers:
         - name: keycloak
           label: Kubespaces

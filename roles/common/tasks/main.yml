@@ -120,6 +120,16 @@
     action: insert
     rule_num: "1"
 
+- name: Allow Warpgate SSH (2222) through iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 2222
+    jump: ACCEPT
+    comment: "Warpgate SSH"
+    action: insert
+    rule_num: "1"
+
 - name: Ensure ufw is disabled
   systemd:
     name: ufw
