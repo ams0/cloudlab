@@ -1,0 +1,5 @@
+---
+# Re-check the full config (main file + every drop-in) before reloading, so a
+# bad change fails the play instead of breaking the next sshd restart.
+- name: Reload sshd
+  shell: /usr/sbin/sshd -t && systemctl reload ssh

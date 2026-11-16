@@ -68,10 +68,8 @@ bao write ssh/roles/warpgate - <<'JSON'
   "key_type": "ca",
   "allow_user_certificates": true,
   "allow_user_key_ids": true,
-  "allowed_users": "root,ubuntu",
-  "default_extensions": {"permit-pty": ""},
-  "ttl": "5m",
-  "max_ttl": "10m"
+  "allowed_users": "root,deploy,ubuntu",
+  "default_extensions": {"permit-pty": ""}
 }
 JSON
 
@@ -87,13 +85,32 @@ bao write auth/kubernetes/role/warpgate \
   bound_service_account_namespaces=warpgate \
   token_policies=warpgate-ssh token_ttl=1h
 
-# 4. CA public key → each target host
-bao read -field=public_key ssh/config/ca   # → /etc/ssh/warpgate_ca.pub
-#   sshd_config: TrustedUserCAKeys /etc/ssh/warpgate_ca.pub
+# 4. CA public key → each target host. For the OCI host this is Ansible:
+#    roles/common installs warpgate_ssh_ca_public_key (group_vars) and an
+#    sshd drop-in with TrustedUserCAKeys.
+bao read -field=public_key ssh/config/ca
 ```
 
-Then in Warpgate (v0.30+, pinned at v0.30.4):
-`Config → Secret backends` → address `http://openbao-openbao.openbao.svc:8200`,
-Kubernetes auth, role `warpgate`, allowed prefix `ssh/sign/warpgate`. On the SSH
-target choose "Certificate signed by a secret backend's SSH CA", mount `ssh`,
-role `warpgate`.
+Writing `ssh/roles/warpgate` replaces the whole role — always resend every
+field, not just the one you are changing.
+
+## Current state (2026-11-16)
+
+All of the above is applied. Warpgate side (lives in Warpgate's database, not Git):
+
+| Object | Value |
+|---|---|
+| Secret backend | `openbao` → `http://openbao-openbao.openbao.svc:8200`, Kubernetes auth, role `warpgate`, allowed path `ssh/sign/warpgate` |
+| Target | `cloudlab-host` → `ubuntu@10.20.10.147:22`, auth *Certificate* (backend `openbao`, mount `ssh`, role `warpgate`) |
+| Known host | the host's ed25519 key, verified against `/etc/ssh/ssh_host_ed25519_key.pub` |
+| Role | `infra` → `cloudlab-host`, granted to `admin` |
+
+Connect: `ssh -p 2222 admin:cloudlab-host@warpgate.vps.kubespaces.cloud`
+
+sshd on the target logs each login as
+`ED25519-CERT … ID warpgate:<user>:<session>`, and Warpgate audits each
+signing as `SshCertificateIssued`.
+
+New targets need: the principal (login user) in the role's `allowed_users`,
+the CA in `TrustedUserCAKeys`, and the host key trusted in Warpgate (an
+interactive first login prompts for it; `exec`-only sessions cannot).

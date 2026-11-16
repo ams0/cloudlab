@@ -130,6 +130,33 @@
     action: insert
     rule_num: "1"
 
+# Trust OpenBao's SSH CA so Warpgate targets can use short-lived certificates
+# (key ID warpgate:<user>:<session> shows up in auth.log). Additive: existing
+# authorized_keys logins keep working. The cert's principal must equal the
+# login user, and the OpenBao role `warpgate` limits which principals it signs.
+- name: Install Warpgate SSH CA public key
+  copy:
+    dest: /etc/ssh/warpgate_ca.pub
+    content: "{{ warpgate_ssh_ca_public_key }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  when: warpgate_ssh_ca_public_key | default('') | length > 0
+  notify: Reload sshd
+
+- name: Trust Warpgate SSH CA in sshd
+  copy:
+    dest: /etc/ssh/sshd_config.d/50-warpgate-ca.conf
+    content: |
+      # Managed by Ansible (roles/common) — see gitops/apps/openbao/README.md
+      TrustedUserCAKeys /etc/ssh/warpgate_ca.pub
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  when: warpgate_ssh_ca_public_key | default('') | length > 0
+  notify: Reload sshd
+
 - name: Ensure ufw is disabled
   systemd:
     name: ufw
