@@ -1,5 +1,7 @@
 # Warpgate
 
+> End-to-end SSH access design (why + how-to): [`SSH_ACCESS.md`](../../../SSH_ACCESS.md)
+
 [warp-tech/warpgate](https://github.com/warp-tech/warpgate) — a smart bastion
 for SSH, HTTP, MySQL and Postgres, with a browser-based admin UI and session
 recording.

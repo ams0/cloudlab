@@ -1,5 +1,7 @@
 # OpenBao
 
+> End-to-end SSH access design (why + how-to): [`SSH_ACCESS.md`](../../../SSH_ACCESS.md)
+
 [OpenBao](https://openbao.org) — the open-source (MPL) fork of Vault. Deployed
 here as the **SSH certificate authority for Warpgate**: Warpgate asks OpenBao to
 sign a 5-minute user certificate per session, and target hosts trust the CA via
