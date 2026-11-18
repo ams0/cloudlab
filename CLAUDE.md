@@ -66,7 +66,7 @@ Workflows in `.github/workflows/`:
 
 Flux watches `gitops/**` directly from the Git repo; `flux-webhook` (Ansible role + `gitops/flux-receiver/`) gives GitHub a receiver for push-triggered reconciliation instead of waiting for the interval.
 
-`origin` fetches from GitHub (canonical, and the source Flux reads) but pushes to **both** GitHub and the Forgejo mirror at `code.vps.kubespaces.cloud`. If the mirror diverges, realign it with a force-push — never rewrite GitHub.
+`origin` fetches from GitHub (canonical, and the source Flux reads) but pushes to **both** GitHub and the public Forgejo mirror at `opencommit.eu/ams0/cloudlab` (token in the macOS Keychain via Git Credential Manager, not in `.git/config`). If the mirror diverges, realign it with a force-push — never rewrite GitHub.
 
 ### Infrastructure Stack
 ```
