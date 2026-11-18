@@ -1,0 +1,15 @@
+---
+# SQLite database, attachments and local backups. Separate from the chart so
+# it survives an uninstall.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opentodo-pvc
+  namespace: opentodo
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

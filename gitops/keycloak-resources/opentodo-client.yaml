@@ -1,0 +1,39 @@
+---
+# OIDC client for OpenTodo. Confidential, authorization code + PKCE (OpenTodo
+# always sends PKCE). OpenTodo links an SSO identity to an existing member by
+# *verified* email; the owner account is linked by hand in Settings → Account →
+# Security → Linked accounts.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: opentodo
+  namespace: keycloak-operator
+spec:
+  clientId: opentodo
+  name: OpenTodo
+  description: OpenTodo task manager (confidential client, authorization code + PKCE)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Created by roles/flux from vault_opentodo_oidc_client_secret.
+  secret: "$opentodo-oidc:clientSecret"
+  webUrl: https://todo.vps.kubespaces.cloud
+  redirectUris:
+    - https://todo.vps.kubespaces.cloud/api/v1/auth/oidc/callback
+  attributes:
+    post.logout.redirect.uris: https://todo.vps.kubespaces.cloud/
+  webOrigins:
+    - https://todo.vps.kubespaces.cloud
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins

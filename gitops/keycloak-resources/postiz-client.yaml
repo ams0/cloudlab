@@ -1,0 +1,36 @@
+---
+# OIDC client for Postiz (generic OAuth provider). Confidential; Postiz does
+# the code exchange server-side, reads `email` + `sub` from userinfo, and uses
+# FRONTEND_URL/settings as the redirect URI.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: postiz
+  namespace: keycloak-operator
+spec:
+  clientId: postiz
+  name: Postiz
+  description: Postiz social scheduler (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Created by roles/flux from vault_postiz_oidc_client_secret.
+  secret: "$postiz-oidc:clientSecret"
+  webUrl: https://postiz.vps.kubespaces.cloud
+  redirectUris:
+    - https://postiz.vps.kubespaces.cloud/settings
+  webOrigins:
+    - https://postiz.vps.kubespaces.cloud
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins

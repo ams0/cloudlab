@@ -23,7 +23,7 @@ spec:
       containers:
         - name: api
           # Keep api and web on the same release.
-          image: ghcr.io/duartesantos8/opengym-api:1.4.1 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-api
+          image: ghcr.io/duartesantos8/opengym-api:1.4.5 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-api
           env:
             - name: PORT
               value: "3000"
@@ -59,7 +59,7 @@ spec:
             limits:
               memory: 512Mi
         - name: web
-          image: ghcr.io/duartesantos8/opengym-web:1.4.1 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-web
+          image: ghcr.io/duartesantos8/opengym-web:1.4.5 # renovate: datasource=docker depName=ghcr.io/duartesantos8/opengym-web
           env:
             # nginx runs as uid 101 and cannot bind <1024 under k0s.
             - name: NGINX_PORT

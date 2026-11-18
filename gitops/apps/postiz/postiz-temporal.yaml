@@ -1,0 +1,76 @@
+---
+# Temporal for Postiz's scheduled-post workflows, as the CLI's single-binary
+# dev server with SQLite on a PVC. Upstream's compose runs the full stack
+# (auto-setup + its own Postgres + Elasticsearch, ~1.5 GiB); one user posting a
+# few times a day does not need it. Swap for the temporal Helm chart if this
+# ever becomes multi-user or the SQLite file grows uncomfortably.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: temporal
+  namespace: postiz
+  labels:
+    app: temporal
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # one SQLite writer
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: temporal
+          image: temporalio/temporal:1.10.1 # renovate: datasource=docker depName=temporalio/temporal
+          args:
+            - server
+            - start-dev
+            - --ip=0.0.0.0
+            - --db-filename=/data/temporal.db
+            - --namespace=default
+            # No web UI: nothing exposes it, and it saves memory.
+            - --headless
+          ports:
+            - name: grpc
+              containerPort: 7233
+          readinessProbe:
+            tcpSocket:
+              port: grpc
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: temporal-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+  namespace: postiz
+spec:
+  selector:
+    app: temporal
+  ports:
+    - name: grpc
+      port: 7233
+      targetPort: grpc

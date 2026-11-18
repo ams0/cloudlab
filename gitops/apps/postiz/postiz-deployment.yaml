@@ -1,0 +1,144 @@
+---
+# One container runs nginx (:5000) in front of the Next.js frontend (:4200),
+# the NestJS backend (:3000) and the Temporal workers, all under pm2. Schema
+# migrations (prisma db push) run on every start.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postiz
+  namespace: postiz
+  labels:
+    app: postiz
+spec:
+  replicas: 1
+  # RWO uploads volume + single node: never surge a second pod.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: postiz
+  template:
+    metadata:
+      labels:
+        app: postiz
+    spec:
+      containers:
+        - name: postiz
+          image: ghcr.io/gitroomhq/postiz-app:v2.26.0 # renovate: datasource=docker depName=ghcr.io/gitroomhq/postiz-app
+          env:
+            # Public origin (TLS ends at the host Traefik).
+            - name: MAIN_URL
+              value: https://postiz.vps.kubespaces.cloud
+            - name: FRONTEND_URL
+              value: https://postiz.vps.kubespaces.cloud
+            - name: NEXT_PUBLIC_BACKEND_URL
+              value: https://postiz.vps.kubespaces.cloud/api
+            - name: BACKEND_INTERNAL_URL
+              value: http://localhost:3000
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-secrets
+                  key: jwtSecret
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-postiz-database-cluster-app
+                  key: uri
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: TEMPORAL_ADDRESS
+              value: temporal:7233
+            - name: IS_GENERAL
+              value: "true"
+            - name: RUN_CRON
+              value: "true"
+            # The first account can still register; after that only Keycloak
+            # logins create accounts (auth.service.ts canRegister()).
+            - name: DISABLE_REGISTRATION
+              value: "true"
+            - name: STORAGE_PROVIDER
+              value: local
+            - name: UPLOAD_DIRECTORY
+              value: /uploads
+            - name: NEXT_PUBLIC_UPLOAD_DIRECTORY
+              value: /uploads
+            - name: API_LIMIT
+              value: "30"
+            - name: NX_ADD_PLUGINS
+              value: "false"
+            # Keycloak (kubespaces realm) as the generic OAuth provider. Postiz
+            # sends users back to FRONTEND_URL/settings.
+            - name: POSTIZ_GENERIC_OAUTH
+              value: "true"
+            - name: NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME
+              value: Kubespaces
+            - name: NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL
+              value: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/keycloak.png
+            - name: POSTIZ_OAUTH_URL
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces
+            - name: POSTIZ_OAUTH_AUTH_URL
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/auth
+            - name: POSTIZ_OAUTH_TOKEN_URL
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/token
+            - name: POSTIZ_OAUTH_USERINFO_URL
+              value: https://auth.vps.kubespaces.cloud/realms/kubespaces/protocol/openid-connect/userinfo
+            - name: POSTIZ_OAUTH_CLIENT_ID
+              value: postiz
+            - name: POSTIZ_OAUTH_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: postiz-secrets
+                  key: oidcClientSecret
+          ports:
+            - name: http
+              containerPort: 5000
+          # First start runs prisma db push and boots four Node processes.
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          volumeMounts:
+            - name: data
+              mountPath: /uploads
+              subPath: uploads
+            - name: data
+              mountPath: /config
+              subPath: config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 768Mi
+            limits:
+              memory: 3Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postiz-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postiz
+  namespace: postiz
+spec:
+  selector:
+    app: postiz
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http

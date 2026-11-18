@@ -588,6 +588,37 @@
   no_log: true
   when: vault_openbao_oidc_client_secret | default('') | trim | length > 0
 
+# OpenTodo: setup token (first account) + Keycloak client secret. The app reads
+# opentodo/opentodo-secrets; the KeycloakClient reads keycloak-operator/opentodo-oidc.
+# Postiz: JWT secret + Keycloak client secret, same split. Applied unconditionally
+# (idempotent) so a vault change propagates.
+- name: Create opentodo and postiz namespaces if not exist
+  shell: |
+    kubectl create namespace opentodo --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create namespace postiz --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Create opentodo and postiz secrets
+  shell: |
+    kubectl -n opentodo create secret generic opentodo-secrets \
+      --from-literal=setup-token={{ vault_opentodo_setup_token | quote }} \
+      --from-literal=oidcClientSecret={{ vault_opentodo_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n keycloak-operator create secret generic opentodo-oidc \
+      --from-literal=clientSecret={{ vault_opentodo_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n postiz create secret generic postiz-secrets \
+      --from-literal=jwtSecret={{ vault_postiz_jwt_secret | quote }} \
+      --from-literal=oidcClientSecret={{ vault_postiz_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+    kubectl -n keycloak-operator create secret generic postiz-oidc \
+      --from-literal=clientSecret={{ vault_postiz_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  register: apps_oidc_secrets
+  changed_when: "'configured' in apps_oidc_secrets.stdout or 'created' in apps_oidc_secrets.stdout"
+  no_log: true
+  when: vault_postiz_jwt_secret | default('') | trim | length > 0
+
 # Warpgate terminates TLS on its own listener — `certificate`/`key` are plain
 # paths in its config and there is no plaintext mode. Normally `unattended-setup`
 # writes a self-signed pair, but with overrides_config the config file already

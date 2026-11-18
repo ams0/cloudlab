@@ -1,0 +1,28 @@
+---
+# Uploaded media (/uploads) and the app's /config, as two subPaths.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postiz-pvc
+  namespace: postiz
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Temporal's SQLite database (workflow history + visibility).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: temporal-pvc
+  namespace: postiz
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi

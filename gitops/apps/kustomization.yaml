@@ -19,6 +19,8 @@ resources:
   - twenty
   - actual
   - opengym
+  - opentodo
+  - postiz
 #  - opencloud     # disabled — manifests kept, re-enable by uncommenting
 
 #  - stakater       # rebuild: off

@@ -11,4 +11,6 @@ resources:
   - opencloud-client.yaml
   - outline-client.yaml
   - warpgate-client.yaml
+  - opentodo-client.yaml
+  - postiz-client.yaml
   - openbao-client.yaml

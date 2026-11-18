@@ -221,6 +221,13 @@ http:
       tls:
         certResolver: letsencrypt
 
+    postiz:
+      rule: "Host(`postiz.vps.kubespaces.cloud`)"
+      entryPoints: [websecure]
+      service: backend-service
+      tls:
+        certResolver: letsencrypt
+
     coder:
       rule: "Host(`coder.vps.kubespaces.cloud`)"
       entryPoints: [websecure]

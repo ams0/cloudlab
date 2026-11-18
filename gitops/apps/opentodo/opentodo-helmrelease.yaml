@@ -1,0 +1,55 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opentodo
+  namespace: flux-system
+  labels:
+    app: opentodo
+spec:
+  interval: 10m
+  timeout: 5m
+  targetNamespace: opentodo
+  chartRef:
+    kind: OCIRepository
+    name: opentodo
+    namespace: flux-system
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    env:
+      # TLS ends at the host Traefik; this must be the exact public origin or
+      # sign-in is refused as cross-site.
+      OPENTODO_BASE_URL: https://todo.vps.kubespaces.cloud
+      OPENTODO_ALLOW_SIGNUP: "false"
+      # Keycloak (kubespaces realm). Setting these locks the fields in
+      # Settings → People → Single sign-on; "new accounts via SSO" and
+      # "SSO only" are still toggled there.
+      OPENTODO_OIDC_ISSUER: https://auth.vps.kubespaces.cloud/realms/kubespaces
+      OPENTODO_OIDC_CLIENT_ID: opentodo
+      OPENTODO_OIDC_DISPLAY_NAME: Kubespaces
+    extraEnv:
+      - name: OPENTODO_OIDC_CLIENT_SECRET
+        valueFrom:
+          secretKeyRef:
+            name: opentodo-secrets
+            key: oidcClientSecret
+    # Created by roles/flux from vault_opentodo_setup_token. A chart-generated
+    # token would change on every Flux reconcile.
+    setupToken:
+      generate: false
+      existingSecret: opentodo-secrets
+      secretKey: setup-token
+    persistence:
+      existingClaim: opentodo-pvc
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
