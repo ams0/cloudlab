@@ -79,6 +79,9 @@ spec:
           Business:
             style: row
             columns: 3
+          Personal:
+            style: row
+            columns: 3
           Observability:
             style: row
             columns: 3
@@ -99,6 +102,10 @@ spec:
                 href: https://warpgate.vps.kubespaces.cloud
                 description: Bastion for SSH and HTTP targets, SSO via Keycloak
                 icon: warpgate.png
+            - OpenBao:
+                href: https://vault.vps.kubespaces.cloud
+                description: SSH certificate authority for Warpgate, login via Keycloak
+                icon: mdi-safe-square-outline
 
         - Automation:
             - n8n:
@@ -125,6 +132,24 @@ spec:
                 href: https://crm.vps.kubespaces.cloud
                 description: Open-source CRM
                 icon: twenty.png
+            - Postiz:
+                href: https://postiz.vps.kubespaces.cloud
+                description: Social media scheduling, SSO via Keycloak
+                icon: mdi-calendar-send
+
+        - Personal:
+            - Actual:
+                href: https://actual.vps.kubespaces.cloud
+                description: Personal budgeting
+                icon: actual-budget.png
+            - OpenTodo:
+                href: https://todo.vps.kubespaces.cloud
+                description: Tasks and lists, SSO via Keycloak
+                icon: mdi-checkbox-marked-circle-outline
+            - openGym:
+                href: https://gym.vps.kubespaces.cloud
+                description: Workout tracking
+                icon: mdi-dumbbell
 
         - Observability:
             - Uptime Kuma:
