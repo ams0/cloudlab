@@ -588,6 +588,19 @@
   no_log: true
   when: vault_openbao_oidc_client_secret | default('') | trim | length > 0
 
+# Client secret for the "proxmox" KeycloakClient (gitops/keycloak-resources/
+# proxmox-client.yaml reads it as $proxmox-oidc:clientSecret). The home repo sets
+# the same value as the Proxmox realm client-key.
+- name: Create proxmox OIDC client secret
+  shell: |
+    kubectl -n keycloak-operator create secret generic proxmox-oidc \
+      --from-literal=clientSecret={{ vault_proxmox_oidc_client_secret | quote }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  register: proxmox_oidc_secret
+  changed_when: "'configured' in proxmox_oidc_secret.stdout or 'created' in proxmox_oidc_secret.stdout"
+  no_log: true
+  when: vault_proxmox_oidc_client_secret | default('') | trim | length > 0
+
 # OpenTodo: setup token (first account) + Keycloak client secret. The app reads
 # opentodo/opentodo-secrets; the KeycloakClient reads keycloak-operator/opentodo-oidc.
 # Postiz: JWT secret + Keycloak client secret, same split. Applied unconditionally

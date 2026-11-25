@@ -26,6 +26,9 @@ spec:
   # /realms/kubespaces/account/ fails with "Server responded with an invalid status".
   roles:
     - default-roles-kubespaces
+  # Group membership drives app authorization (e.g. proxmox-admins -> PVE Administrator).
+  groups:
+    - proxmox-admins
   # Created by roles/flux from vault_opencloud_user_password.
   passwordSecret:
     name: opencloud-user

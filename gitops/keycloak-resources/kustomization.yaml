@@ -14,3 +14,4 @@ resources:
   - opentodo-client.yaml
   - postiz-client.yaml
   - openbao-client.yaml
+  - proxmox-client.yaml

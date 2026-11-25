@@ -1,0 +1,72 @@
+---
+# OIDC client for the home Proxmox VE cluster (nas + cloud, realm "keycloak" in
+# /etc/pve/domains.cfg, managed by the ams0 home repo). Confidential — pveproxy
+# does the code exchange server-side. Authorization is group-based: Proxmox reads
+# the "groups" claim and maps Keycloak group X to PVE group "X-keycloak"
+# (proxmox-admins -> proxmox-admins-keycloak -> Administrator on /).
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: proxmox
+  namespace: keycloak-operator
+spec:
+  clientId: proxmox
+  name: Proxmox VE
+  description: Home Proxmox VE cluster login (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Same value the home repo sets as the realm client-key; created by roles/flux
+  # from vault_proxmox_oidc_client_secret.
+  secret: "$proxmox-oidc:clientSecret"
+  webUrl: https://nas.rhino-butterfly.ts.net:8006
+  # Proxmox uses the browser's origin as redirect_uri, so list every URL the UI
+  # is opened on: tailnet names (Tailscale LE certs) and LAN IPs as fallback.
+  redirectUris:
+    - https://nas.rhino-butterfly.ts.net:8006
+    - https://nas.rhino-butterfly.ts.net:8006/*
+    - https://cloud.rhino-butterfly.ts.net:8006
+    - https://cloud.rhino-butterfly.ts.net:8006/*
+    - https://192.168.178.4:8006
+    - https://192.168.178.4:8006/*
+    - https://192.168.178.2:8006
+    - https://192.168.178.2:8006/*
+  webOrigins:
+    - https://nas.rhino-butterfly.ts.net:8006
+    - https://cloud.rhino-butterfly.ts.net:8006
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins
+  protocolMappers:
+    - name: groups
+      protocol: openid-connect
+      protocolMapper: oidc-group-membership-mapper
+      config:
+        claim.name: groups
+        full.path: "false"
+        id.token.claim: "true"
+        access.token.claim: "true"
+        userinfo.token.claim: "true"
+---
+# Members get Administrator on the whole Proxmox cluster.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakRealmGroup
+metadata:
+  name: proxmox-admins
+  namespace: keycloak-operator
+spec:
+  name: proxmox-admins
+  description: Administrator on the home Proxmox VE cluster
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
