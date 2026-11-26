@@ -1,0 +1,73 @@
+---
+# OIDC client for the HOME NetBox (LXC 107 on the home "cloud" Proxmox node,
+# managed by the ams0 home repo, role netbox). Served on the tailnet only via
+# `tailscale serve`. NetBox uses python-social-auth's generic OIDC backend, so
+# the callback is /oauth/complete/oidc/ (the backend name, not the IdP's).
+# Authorization: members of Keycloak group netbox-admins become NetBox
+# superusers through a custom social-auth pipeline step in the home repo;
+# everyone else gets a plain account.
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakClient
+metadata:
+  name: netbox
+  namespace: keycloak-operator
+spec:
+  clientId: netbox
+  name: NetBox (home)
+  description: Home NetBox login (confidential client, authorization code)
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm
+  enabled: true
+  protocol: openid-connect
+  public: false
+  standardFlowEnabled: true
+  implicitFlowEnabled: false
+  directAccess: false
+  # Same value the home repo uses; created by roles/flux from
+  # vault_netbox_oidc_client_secret.
+  secret: "$netbox-oidc:clientSecret"
+  webUrl: https://netbox.rhino-butterfly.ts.net
+  redirectUris:
+    - https://netbox.rhino-butterfly.ts.net/oauth/complete/oidc/
+  webOrigins:
+    - https://netbox.rhino-butterfly.ts.net
+  defaultClientScopes:
+    - basic
+    - acr
+    - profile
+    - email
+    - roles
+    - web-origins
+  protocolMappers:
+    # social-core validates the id_token audience against the client id.
+    - name: netbox-audience
+      protocol: openid-connect
+      protocolMapper: oidc-audience-mapper
+      config:
+        included.client.audience: netbox
+        id.token.claim: "true"
+        access.token.claim: "true"
+    - name: groups
+      protocol: openid-connect
+      protocolMapper: oidc-group-membership-mapper
+      config:
+        claim.name: groups
+        full.path: "false"
+        id.token.claim: "true"
+        access.token.claim: "true"
+        userinfo.token.claim: "true"
+---
+# Members become superusers in the home NetBox on every login (and lose it
+# when removed from the group).
+apiVersion: v1.edp.epam.com/v1
+kind: KeycloakRealmGroup
+metadata:
+  name: netbox-admins
+  namespace: keycloak-operator
+spec:
+  name: netbox-admins
+  description: Superuser in the home NetBox
+  realmRef:
+    name: kubespaces
+    kind: KeycloakRealm

@@ -29,6 +29,7 @@ spec:
   # Group membership drives app authorization (e.g. proxmox-admins -> PVE Administrator).
   groups:
     - proxmox-admins
+    - netbox-admins
   # Created by roles/flux from vault_opencloud_user_password.
   passwordSecret:
     name: opencloud-user
